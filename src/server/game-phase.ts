@@ -155,6 +155,6 @@ export async function markReady(
   if (error) return { error: "준비를 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요." };
 
   const { ready, total } = await readyCounts(db, game, phase);
-  await broadcast(db, game.room_id, { type: "count", phase, ready, total });
+  await broadcast(db, game.room_id, { type: "count", ready });
   return { ok: true, ready, total, serverNow };
 }
