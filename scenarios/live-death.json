@@ -1,0 +1,182 @@
+{
+  "id": "live-death",
+  "title": "생방송 중 사망",
+  "version": 1,
+  "timeline": [
+    { "at": "21:30", "text": "PD가 제작진 단톡방에 \"내일 생방송에서 전부 말할 거야. 원본은 편집실에 있다.\"" },
+    { "at": "21:50", "text": "누군가 발전기실 차단기를 내린다" },
+    { "at": "22:00", "text": "섬 전체 정전 (10분)" },
+    { "at": "22:00~22:10", "text": "범인이 편집실에서 PD를 결승 트로피로 내리치고 원본 하드디스크를 가져간다" },
+    { "at": "22:12", "text": "비상 전원, 쓰러진 PD 발견" }
+  ],
+  "characters": [
+    { "id": "fav", "core": true, "name": "국민 호감 1위", "intro": "착한 이미지로 인기 1위", "order": 1 },
+    { "id": "villain", "core": true, "name": "악역 담당", "intro": "방송에서 욕먹는 캐릭터", "order": 2 },
+    { "id": "athlete", "core": true, "name": "전직 운동선수", "intro": "상금이 꼭 필요한 사람", "order": 3 },
+    { "id": "writer", "core": true, "name": "막내 작가", "intro": "제작진이지만 섬에 남은 사람", "order": 4 },
+    { "id": "influencer", "core": false, "minPlayers": 5, "name": "인플루언서", "intro": "팔로워 300만, 방송보다 SNS", "order": 5 },
+    { "id": "medic", "core": false, "minPlayers": 6, "name": "의료 담당", "intro": "출연자 건강 체크 스태프", "order": 6 }
+  ],
+  "secrets": [
+    { "id": "s-fav-1", "character": "fav", "text": "제작진에게 미리 미션 내용을 받았다" },
+    { "id": "s-villain-1", "character": "villain", "text": "악역은 PD가 시킨 대본이었다" },
+    { "id": "s-athlete-1", "character": "athlete", "text": "큰 빚이 있고 사채업자에게 쫓긴다" },
+    { "id": "s-writer-1", "character": "writer", "text": "원본 영상 백업을 몰래 갖고 있다" },
+    { "id": "s-influencer-1", "character": "influencer", "text": "섬에서 몰래 라이브를 켰었다" },
+    { "id": "s-medic-1", "character": "medic", "text": "탈락자 \"사고\" 기록을 고쳤다" }
+  ],
+  "alibis": [
+    { "id": "a-fav-1", "character": "fav", "text": "TODO(시나리오 담당)" },
+    { "id": "a-villain-1", "character": "villain", "text": "TODO(시나리오 담당)" },
+    { "id": "a-athlete-1", "character": "athlete", "text": "TODO(시나리오 담당)" },
+    { "id": "a-writer-1", "character": "writer", "text": "TODO(시나리오 담당)" },
+    { "id": "a-influencer-1", "character": "influencer", "text": "TODO(시나리오 담당)" },
+    { "id": "a-medic-1", "character": "medic", "text": "TODO(시나리오 담당)" }
+  ],
+  "traits": [
+    { "id": "t-citrus", "text": "시트러스 향수 냄새", "characters": ["fav", "influencer"] },
+    { "id": "t-black-cap", "text": "검은 볼캡 실루엣", "characters": ["villain", "athlete", "medic"] },
+    { "id": "t-limp", "text": "오른쪽 다리를 살짝 저는 걸음", "characters": ["athlete", "medic"] },
+    { "id": "t-radio", "text": "무전기 지직거리는 소리", "characters": ["writer", "medic"] }
+  ],
+  "culprits": [
+    {
+      "character": "fav",
+      "motive": "미션 유출이 드러나면 이미지와 광고 계약 끝",
+      "mistake": "\"정전 때 누워 있었다\"는데 폰 충전 기록이 21:48에 끊김",
+      "trait": "t-citrus"
+    },
+    {
+      "character": "villain",
+      "motive": "\"사고를 유발한 악역\"이 될까 두려움",
+      "mistake": "현장 사진 공개 전에 \"트로피로 그랬다며?\"",
+      "trait": "t-black-cap"
+    },
+    {
+      "character": "athlete",
+      "motive": "상금 없으면 빚을 못 갚음, 폭로되면 결승 취소",
+      "mistake": "무릎 보호대 찍찍이 조각이 편집실 문틈에. \"오늘 보호대 안 찼다\"",
+      "trait": "t-limp"
+    },
+    {
+      "character": "writer",
+      "motive": "원본을 PD보다 먼저 언론에 팔려 함",
+      "mistake": "파일명 \"EP3_RAW_cliff\"를 정확히 앎, 편집실 안 갔다고 함",
+      "trait": "t-radio"
+    }
+  ],
+  "clues": [
+    { "id": "c-r1-01", "round": 1, "visibility": "public", "text": "TODO(시나리오 담당)" },
+    { "id": "c-r1-02", "round": 1, "visibility": "public", "text": "TODO(시나리오 담당)" },
+    {
+      "id": "c-r1-03", "round": 1, "visibility": "private",
+      "for": ["villain", "athlete", "writer", "influencer", "medic"],
+      "pointsTo": ["fav"], "redHerring": false,
+      "text": "폰 충전 기록이 21:48에 끊김"
+    },
+    {
+      "id": "c-r1-04", "round": 1, "visibility": "private",
+      "for": ["fav", "villain", "writer", "influencer", "medic"],
+      "pointsTo": ["athlete"], "redHerring": true,
+      "text": "선수 가방 속 피 묻은 수건"
+    },
+    {
+      "id": "c-r1-05", "round": 1, "visibility": "private",
+      "for": ["fav", "villain", "athlete", "writer", "medic"],
+      "pointsTo": ["influencer"], "redHerring": true,
+      "text": "발전기실 근처 진흙 발자국"
+    },
+    {
+      "id": "c-r1-06", "round": 1, "visibility": "private",
+      "for": ["fav", "villain", "athlete", "influencer", "medic"],
+      "pointsTo": ["writer"], "redHerring": true,
+      "text": "작가 숙소의 빈 하드디스크 케이스"
+    },
+    {
+      "id": "c-r1-07", "round": 1, "visibility": "private",
+      "for": ["fav", "villain", "athlete", "writer", "influencer"],
+      "pointsTo": ["medic"], "redHerring": true,
+      "text": "의료 가방 수면제 한 통이 빔"
+    },
+    {
+      "id": "c-r1-08", "round": 1, "visibility": "private",
+      "for": ["fav", "athlete", "writer", "influencer", "medic"],
+      "pointsTo": ["villain"], "redHerring": false,
+      "text": "TODO(시나리오 담당)"
+    },
+    {
+      "id": "c-r1-09", "round": 1, "visibility": "private",
+      "for": ["fav", "villain", "writer", "influencer", "medic"],
+      "pointsTo": ["athlete"], "redHerring": false,
+      "text": "TODO(시나리오 담당)"
+    },
+    {
+      "id": "c-r1-10", "round": 1, "visibility": "private",
+      "for": ["fav", "villain", "athlete", "influencer", "medic"],
+      "pointsTo": ["writer"], "redHerring": false,
+      "text": "TODO(시나리오 담당)"
+    },
+    {
+      "id": "c-r2-01", "round": 2, "visibility": "public",
+      "text": "PD가 제작진 단톡방에 \"내일 생방송에서 전부 말할 거야. 원본은 편집실에 있다.\""
+    },
+    {
+      "id": "c-r2-02", "round": 2, "visibility": "private",
+      "for": ["fav", "athlete", "writer", "influencer", "medic"],
+      "pointsTo": ["villain"], "redHerring": true,
+      "text": "PD 폰 최근 통화에 악역 3회"
+    },
+    {
+      "id": "c-r2-03", "round": 2, "visibility": "private",
+      "for": ["fav", "villain", "writer", "influencer", "medic"],
+      "pointsTo": ["athlete"], "redHerring": false,
+      "text": "무릎 보호대 찍찍이 조각이 편집실 문틈에"
+    },
+    {
+      "id": "c-r2-04", "round": 2, "visibility": "private",
+      "for": ["villain", "athlete", "writer", "influencer", "medic"],
+      "pointsTo": ["fav"], "redHerring": false,
+      "text": "TODO(시나리오 담당)"
+    },
+    {
+      "id": "c-r2-05", "round": 2, "visibility": "private",
+      "for": ["fav", "athlete", "writer", "influencer", "medic"],
+      "pointsTo": ["villain"], "redHerring": false,
+      "text": "TODO(시나리오 담당)"
+    },
+    {
+      "id": "c-r2-06", "round": 2, "visibility": "private",
+      "for": ["fav", "villain", "athlete", "influencer", "medic"],
+      "pointsTo": ["writer"], "redHerring": false,
+      "text": "TODO(시나리오 담당)"
+    },
+    { "id": "c-r3-01", "round": 3, "visibility": "public", "pointsTo": ["fav"], "redHerring": false, "text": "TODO(시나리오 담당)" },
+    { "id": "c-r3-02", "round": 3, "visibility": "public", "pointsTo": ["villain"], "redHerring": false, "text": "TODO(시나리오 담당)" },
+    { "id": "c-r3-03", "round": 3, "visibility": "public", "pointsTo": ["athlete"], "redHerring": false, "text": "TODO(시나리오 담당)" },
+    { "id": "c-r3-04", "round": 3, "visibility": "public", "pointsTo": ["writer"], "redHerring": false, "text": "TODO(시나리오 담당)" }
+  ],
+  "redHerrings": [
+    { "clue": "c-r1-04", "suspect": "athlete", "truth": "사채업자에게 맞은 상처를 숨김" },
+    { "clue": "c-r1-05", "suspect": "influencer", "truth": "몰래 라이브하려고 와이파이를 찾아다님" },
+    { "clue": "c-r2-02", "suspect": "villain", "truth": "생방송 대본 수정 통화" },
+    { "clue": "c-r1-06", "suspect": "writer", "truth": "원본 백업용 개인 하드디스크" },
+    { "clue": "c-r1-07", "suspect": "medic", "truth": "선수에게 진통제와 함께 넘김" }
+  ],
+  "pairs": [
+    { "a": "fav", "b": "writer", "secret": "작가가 미션 내용을 흘렸다", "tension": "들키면 둘 다 끝" },
+    { "a": "villain", "b": "writer", "secret": "악역 대본을 작가가 썼다", "tension": "악역은 \"나도 피해자\"라고 말하고 싶다" },
+    { "a": "athlete", "b": "villain", "secret": "악역이 선수의 빚을 안다", "tension": "악역이 협박해 왔다" },
+    { "a": "athlete", "b": "medic", "secret": "의료가 몰래 진통제를 줬다", "tension": "선수는 부상을 숨기고 출전 중" },
+    { "a": "fav", "b": "influencer", "secret": "인플이 호감의 \"착한 척 안 하는\" 영상을 갖고 있다", "tension": "인플은 팔로워를 노린다" },
+    { "a": "influencer", "b": "medic", "secret": "둘 다 사고 당일 밤 현장 근처에 있었다", "tension": "말하지 않기로 약속" }
+  ],
+  "rounds": [
+    { "round": 1, "place": "숙소 거실", "time": "현재", "minutes": 8 },
+    { "round": 2, "place": "편집실", "time": "현재", "minutes": 10 },
+    { "round": 3, "place": "원본 영상 속 그날 밤", "time": "과거", "minutes": 8 }
+  ],
+  "reveal": {
+    "pastTruth": "절벽 로프 미션에서 서진의 안전 로프가 낡은 것으로 바꿔치기되어 추락, 크게 다침. 제작진이 시청률을 위해 덮음",
+    "endings": { "caught": "검거 성공", "aired_off": "방송 중단" }
+  }
+}
