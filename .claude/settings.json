@@ -16,5 +16,9 @@
       "Bash(git push origin HEAD:develop:*)",
       "Bash(gh pr merge:*)"
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node \"${CLAUDE_PROJECT_DIR:-.}/scripts/claude-statusline.mjs\""
   }
 }

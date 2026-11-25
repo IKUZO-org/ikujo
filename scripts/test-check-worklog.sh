@@ -5,7 +5,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
 cd "$t" && git init -q && git config user.email t@t && git config user.name t
 git commit -q --allow-empty -m base && base=$(git rev-parse HEAD)
-full=$'## 할 일\nx\n## 프롬프트 요약\nx\n## 사용한 skill\nx\n## 확인\nx\n'
+full=$'## 할 일\nx\n## 프롬프트 요약\nx\n## 사용한 skill\nx\n## 확인\nx\n## 사용량\n<!-- usage {"messages":1} -->\n'
 pass=0; fail=0
 run() { # 이름, 기대(0/1), 작성자, 넣을 파일=내용...
   local name=$1 want=$2 who=$3; shift 3
@@ -19,5 +19,6 @@ run 기록있음 0 Hyeon "src/a.ts=x" "docs/work/hyeon/2026-11-25-room.md=$full"
 run 기록없음 1 hyeon "src/a.ts=x"
 run 남의폴더 1 hyeon "src/a.ts=x" "docs/work/jeong/2026-11-25-room.md=$full"
 run 칸빠짐 1 hyeon "docs/work/hyeon/2026-11-25-room.md=## 할 일"
+run 사용량빠짐 1 hyeon "docs/work/hyeon/2026-11-25-room.md=${full%%## 사용량*}"
 run 봇 0 "dependabot[bot]" "package.json={}"
 echo "통과 $pass, 틀림 $fail"; [ "$fail" = 0 ]

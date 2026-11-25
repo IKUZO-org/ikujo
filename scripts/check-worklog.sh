@@ -14,9 +14,9 @@ fi
 
 fail=0
 for f in $files; do
-  for h in '## 할 일' '## 프롬프트 요약' '## 사용한 skill' '## 확인'; do
+  for h in '## 할 일' '## 프롬프트 요약' '## 사용한 skill' '## 확인' '## 사용량' '<!-- usage {'; do
     if ! git show "$head:$f" | grep -qF "$h"; then
-      echo "::error file=$f::필수 칸 '$h' 이 없어요 (docs/work/_template.md 참고)."
+      echo "::error file=$f::필수 칸 '$h' 이 없어요 (docs/work/_template.md 참고. 사용량은 node scripts/usage.mjs --md)."
       fail=1
     fi
   done
