@@ -1,0 +1,20 @@
+/* 토큰 이름은 DESIGN.md §5. 값은 상경 확정 전이라 비워 둔다 */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* 모바일 기준 (CLAUDE.md §2): 데스크톱에서도 가운데 최대 430px 그대로 */
+.app-frame {
+  max-width: 430px;
+  min-height: 100dvh;
+  margin: 0 auto;
+}
