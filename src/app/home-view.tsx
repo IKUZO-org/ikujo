@@ -54,10 +54,6 @@ export function HomeView() {
           들어가기
         </Button>
       </form>
-
-      <p className="text-(length:--text-sm) text-(--color-text-muted)">
-        로그인하면 완료 기록이 남아요
-      </p>
     </Screen>
   );
 }
