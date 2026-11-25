@@ -8,14 +8,23 @@
 2. **이슈부터.** 일을 시작하기 전에 그 일의 열린 이슈 번호를 확정한다. 사용자가 번호를 말하지 않았으면 `gh issue list --assignee @me --state open` 로 찾아 보여 주고 고르게 한다. 맞는 이슈가 없으면 [할 일 템플릿](.github/ISSUE_TEMPLATE/task.yml)의 칸(문서 번호, 할 일, 끝났다고 보는 기준)을 채운 초안을 보여 주고, 사용자가 좋다고 하면 `gh issue create --assignee @me` 로 만든다 (`gh` 가 없으면 `https://github.com/IKUZO-org/ikujo/issues/new/choose` 링크). 이슈 없이 코드를 고치지 않는다
 3. 지금 브랜치를 본다. `main` 이나 `develop` 이면 코드를 고치기 전에 `develop` 에서 브랜치를 만든다 (3번)
 4. 시킨 일이 docs의 어느 번호(FR, BR, AC, S-, 단계)인지 찾아 [docs/prd.md](docs/prd.md), [docs/spec.md](docs/spec.md), [docs/data.md](docs/data.md)에서 그 부분을 읽는다. 단계별 담당과 할 말은 [docs/dev-prompt.md](docs/dev-prompt.md)
+5. 일의 종류에 맞는 규칙 문서를 **코드를 쓰기 전에** 읽는다:
+
+| 일 | 먼저 읽을 것 |
+| --- | --- |
+| 모든 일 | [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) |
+| 화면, 컴포넌트, 스타일 | [DESIGN.md](DESIGN.md) (토큰 이름만 쓰고, `상경 확정 전` 값을 지어내지 않는다) |
+| 서버, DB, 마이그레이션, 실시간, 폴더 | [ARCHITECTURE.md](ARCHITECTURE.md) |
 
 ## 2. 만드는 규칙
 - [docs/dev-prompt.md](docs/dev-prompt.md) "모든 단계에 같이 붙일 공통 규칙"을 따른다
 - **화면은 모바일 기준이다 (반응형 아님).** 기준 폭 390px, 360~430px에서 깨지지 않게. 데스크톱에서는 가운데에 최대 430px 폭 그대로 보여 주고, 넓은 화면용 분기(`md:`, `lg:` 등)를 만들지 않는다. 누르는 곳은 44px 이상. 화면 확인은 390×844 뷰포트에서
 - 문서에 없는 기능은 만들지 않는다. 정해지지 않은 것(OQ)은 spec의 임시 결정대로 하고 코드 주석에 OQ 번호를 남긴다
 - docs의 PRD, 기능명세, 데이터 구성, 개발 프롬프트는 Hatch 원본의 사본이다. 고치지 않는다. 고칠 것이 보이면 작업 기록의 "남은 일"에 적는다
+- 규칙 문서(CONTRIBUTING, SECURITY, ARCHITECTURE, DESIGN)는 [CONTRIBUTING.md](CONTRIBUTING.md) 표의 **담당자가 시킬 때** 고친다 (이슈 → 브랜치 → PR, PO가 검토). 담당이 아닌 사람이 시키면 고치지 말고 담당자에게 넘길 이슈 초안을 만든다
+- 규칙 문서와 docs가 어긋나면 docs를 따르고 사람에게 알린다
 
-## 3. 깃 흐름 (자세히는 [docs/rules.md](docs/rules.md))
+## 3. 깃 흐름 (자세히는 [CONTRIBUTING.md](CONTRIBUTING.md))
 - 브랜치 두 개: **`develop`**(개발이 모이는 곳, 기본 브랜치)과 **`main`**(실제 출시본. 출시할 때만 `develop` 을 합친다)
 - 내 브랜치: `git switch develop && git pull && git switch -c <나>/<종류>-<이슈번호>-<주제>`. 종류는 `feat`, `fix`, `docs`, `chore`, `test`. 주제는 영어 소문자와 `-` (예: `hyeon/feat-12-room-lobby`)
 - `main`, `develop` 에 커밋하거나 push하지 않는다. force push 하지 않는다
@@ -33,7 +42,7 @@ PR 하나에 기록 하나: `docs/work/<나>/<YYYY-MM-DD>-<브랜치 주제>.md`
 - 같은 브랜치에서 세션이 이어지면 같은 파일에 "세션 2" 를 덧붙인다
 - PR 검사 `worklog` 가 이 파일이 없거나 필수 칸이 빠지면 PR을 막는다
 
-## 5. 보안 (반드시)
+## 5. 보안 (반드시, 자세히는 [SECURITY.md](SECURITY.md))
 - 비밀 값은 `.env.local` 에만. `.env*` 파일을 읽거나 출력하거나 커밋하지 않는다 (`.env.example` 은 값 없이 이름만)
 - 사용자가 채팅에 키를 붙이면 쓰지 말고 "지우고 키를 다시 발급하라"고 알린다
 - Supabase `service_role` 키와 서버 비밀은 `server-only` 파일에서만 쓴다. 이름에 `NEXT_PUBLIC_` 를 붙이지 않는다. 브라우저에는 URL과 publishable(anon) 키만 간다

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PR 검사 worklog: PR 작성자의 작업 기록이 있고 필수 칸이 다 있는지 본다 (docs/rules.md "작업 기록")
+# PR 검사 worklog: PR 작성자의 작업 기록이 있고 필수 칸이 다 있는지 본다 (CONTRIBUTING.md "작업 기록")
 # 쓰는 법: check-worklog.sh <base-sha> <head-sha> <작성자 깃허브 아이디>
 set -euo pipefail
 base="$1"; head="$2"; author="$(printf '%s' "$3" | tr '[:upper:]' '[:lower:]')"
