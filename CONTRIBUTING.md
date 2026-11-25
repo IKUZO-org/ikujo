@@ -62,8 +62,11 @@
 ## 작업 기록
 - 위치: `docs/work/<깃허브아이디 소문자>/<YYYY-MM-DD>-<주제>.md`, PR마다 하나
 - 형식: [docs/work/_template.md](docs/work/_template.md). Claude는 `worklog` skill로 쓴다
-- 필수 칸: `## 할 일`, `## 프롬프트 요약`, `## 사용한 skill`, `## 확인`
+- 필수 칸: `## 할 일`, `## 프롬프트 요약`, `## 사용한 skill`, `## 확인`, `## 사용량`
 - 프롬프트는 요약만. 키, 개인정보는 `[가림]`
+- `## 사용량`은 `node scripts/usage.mjs --md` 결과를 그대로 붙인다 (손으로 고치지 않는다). 내 컴퓨터의 Claude Code 기록에서 **이 브랜치, 이 레포 폴더**로 쓴 것만 센다. 레포에 올라가는 것은 숫자와 이름(모델, 도구, skill, 에이전트)뿐이다
+- 사용률 %는 이 레포의 상태줄(`scripts/claude-statusline.mjs`)이 켜진 뒤부터 남는다. 계정 전체 값이라 다른 작업도 섞인다
+- 팀 합계 [docs/usage.md](docs/usage.md): PO가 `node scripts/usage-report.mjs --write` 로 만들어 PR로 올린다
 
 ## 레포 설정 (켜져 있음, 바꿀 때는 PO)
 - 기본 브랜치 `develop`

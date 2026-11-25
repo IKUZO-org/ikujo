@@ -4,7 +4,8 @@ PR마다 하나씩, 그 PR을 올린 사람 폴더에 남긴다. 나중에 누�
 
 - 위치: `docs/work/<깃허브아이디 소문자>/<YYYY-MM-DD>-<주제>.md`
 - 형식: [_template.md](_template.md)
-- 필수 칸: `## 할 일`, `## 프롬프트 요약`, `## 사용한 skill`, `## 확인`
+- 필수 칸: `## 할 일`, `## 프롬프트 요약`, `## 사용한 skill`, `## 확인`, `## 사용량`
+- `## 사용량`: `node scripts/usage.mjs --md` 가 만든다 (이 브랜치에서 쓴 Claude 토큰, 비용, 사용률 %, 도구, skill). 팀 합계는 [docs/usage.md](../usage.md)
 - Claude Code는 커밋 전에 `worklog` skill로 쓴다 ([CLAUDE.md](../../CLAUDE.md) 4번)
 - PR 검사 `worklog` 가 PR 작성자 폴더에 이 파일이 있는지, 필수 칸이 있는지 본다 ([scripts/check-worklog.sh](../../scripts/check-worklog.sh))
 
