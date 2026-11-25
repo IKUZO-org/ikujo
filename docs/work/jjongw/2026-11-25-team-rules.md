@@ -5,7 +5,7 @@
 | 날짜 | 2026-11-25 |
 | 사람 | @JJongW |
 | 브랜치 | jjongw/chore-team-rules |
-| 이슈 | 없음 (레포 첫 세팅) |
+| 이슈 | #2 |
 | 문서 번호 | 해당 없음 |
 
 ## 할 일
@@ -62,3 +62,35 @@
 
 ### 남은 일
 - 없음 (위 "남은 일"과 같음)
+
+## 세션 3 (2026-11-25)
+
+### 할 일
+작업은 반드시 이슈부터, `main`/`develop` 분리, 모바일 기준 개발 규칙을 넣는다.
+
+### 한 일
+- 레포: `develop` 브랜치를 만들어 기본 브랜치로 바꿈, PR #1 대상을 `develop` 으로, 이 작업 이슈 #2 생성
+- `CLAUDE.md`, `docs/rules.md`, `README.md`: 이슈 먼저(없으면 템플릿 칸으로 초안 → 허락 → 생성), 브랜치 `<아이디>/<종류>-<이슈번호>-<주제>` 를 `develop` 에서, 작업 PR은 `develop` 으로 Squash, 출시 PR `develop` → `main` 은 PO만 Merge commit
+- `CLAUDE.md`: 화면은 모바일 기준(390px, 360~430px, 데스크톱은 가운데 430px, 넓은 화면 분기 없음, 누르는 곳 44px)
+- `docs/dev-prompt.md`: 같은 모바일 규칙을 공통 규칙에 넣어 운영 Hatch에 3판으로 저장하고 사본 갱신
+- `pr-check.yml`: `issue`(Closes #N 이 열린 이슈), `release`(main 에는 develop 에서 온 PR만) 추가. 작업 PR은 issue, worklog, secrets / 출시 PR은 release, secrets
+- `scripts/check-issue.sh`, PR 템플릿 안내, Claude 권한에 develop push 막기 추가
+
+### 프롬프트 요약
+1. PR 만들기 링크 대신 템플릿을 채운 PR을 직접 만들어 달라 → gh 사용 허락
+2. 나만이 아니라 모두가 지킬 이슈, 머지, PR 템플릿이 있어야 한다
+3. 어떤 작업이든 시작할 때 반드시 이슈를 만들고 한다
+4. `main` 과 `develop` 으로 나눈다. `main` 은 실제 출시 때만, 개발자와 PO는 `develop` 으로만 머지
+5. 모바일 화면이 메인이니 반응형이 아니라 모바일 기준으로 개발하게, 개발 프롬프트에 그대로 넣는다
+
+### 사용한 skill
+- 없음 (gh CLI로 이슈, PR, 브랜치, 기본 브랜치 설정)
+
+### 확인
+- `check-issue.sh` 실제 레포로 6가지 → 본문에 없음 실패, 없는 #999 실패, PR #1 실패, 열린 이슈 #2 통과, 소문자 fixes 통과, 봇 건너뜀 (없는 번호를 "닫힘"으로 잘못 말하던 버그를 고침)
+- `test-check-worklog.sh` → 5개 모두 기대대로
+- `pr-check.yml` YAML 문법 확인
+- 사본 4개 = 운영 Hatch 최신 판 (dev-prompt 3판)
+
+### 남은 일
+- 관리자: `develop`, `main` 브랜치 보호와 머지 방식 설정 (docs/rules.md "레포 설정")

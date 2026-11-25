@@ -1,22 +1,23 @@
-<!-- 원본: Hatch 팀 문서 "개발 프롬프트" 2판. 고칠 때는 Hatch에서 고치고 이 사본을 바꾼다 -->
+<!-- 원본: Hatch 팀 문서 "개발 프롬프트" 3판. 고칠 때는 Hatch에서 고치고 이 사본을 바꾼다 -->
 # 개발 프롬프트 — 「LAST ONE」
 
 ## 0. 이 문서 쓰는 법
 | 항목 | 내용 |
 | --- | --- |
-| 버전 | v0.1 |
+| 버전 | v0.2 (모바일 기준, 이슈와 develop 흐름 반영) |
 | 근거 | PRD 2판, 기능명세 v0.1, 데이터 구성 v0.1 |
 | 레포 | GitHub `IKUZO-org` (개발 레포) |
 | 누가 | 개발 현경(로그인, 홈, 시나리오), 정연(온보딩, 시작과 완료, 설정, 점검, Vercel, Supabase) — PRD §28.10 |
 
-- 아래 단계는 **순서대로**. 한 단계 = 브랜치 하나 = PR 하나
+- 아래 단계는 **순서대로**. 한 단계 = 이슈 하나 = 브랜치 하나 = PR 하나 (PR 대상은 `develop`, 규칙은 레포 `docs/rules.md`)
 - 각 단계의 "Claude에게 줄 말"을 Claude Code에 그대로 붙인다. 문서 세 개(PRD, 기능명세, 데이터 구성)를 레포 `docs/`에 먼저 넣어 두면 Claude가 읽는다
 - 끝나면 "확인" 칸을 실제로 돌리고 PR에 결과를 붙인다
 
 ### 모든 단계에 같이 붙일 공통 규칙
 ```
 너는 「LAST ONE」 웹앱을 만드는 개발자다. docs/prd.md, docs/spec.md, docs/data.md 를 먼저 읽고 그 번호(FR, BR, AC, S-)를 따른다.
-- 기술: Next.js App Router + TypeScript, Supabase(Auth, Postgres, Realtime), Vercel. 모바일 웹 우선.
+- 기술: Next.js App Router + TypeScript, Supabase(Auth, Postgres, Realtime), Vercel.
+- 화면은 반응형이 아니라 모바일 기준으로 만든다. 기준 폭 390px(360~430px에서 깨지지 않게), 데스크톱에서는 가운데에 최대 430px 폭 그대로 보여 주고 데스크톱용 레이아웃(md:, lg: 등 넓은 화면 분기)은 만들지 않는다. 누르는 곳은 44px 이상. 확인은 모바일 뷰포트(390×844)에서 한다.
 - 비밀(배정, 범인, 개별 투표)은 서버와 그 사람만. 클라이언트에서 DB에 바로 쓰지 않는다. 쓰기는 Server Action + service role.
 - 단계(phase)는 서버의 games.phase 하나만 진실이다. 화면은 따라 그린다.
 - 문서에 없는 기능은 만들지 않는다. 정해지지 않은 것(OQ)은 spec §9의 임시 결정대로 하고 코드 주석에 OQ 번호를 남긴다.

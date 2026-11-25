@@ -7,7 +7,7 @@ description: 이 레포에서 작업을 커밋하거나 PR을 올리기 전에 �
 
 ## 1. 어디에
 - 아이디: `git config ikujo.login` (비어 있으면 사용자에게 묻고 저장). 소문자로 쓴다
-- 브랜치: `git branch --show-current`. `main` 이면 멈추고 브랜치부터 만든다 ([CLAUDE.md](../../../CLAUDE.md) 3번)
+- 브랜치: `git branch --show-current`. `main` 이나 `develop` 이면 멈추고 브랜치부터 만든다 ([CLAUDE.md](../../../CLAUDE.md) 3번)
 - 파일: `docs/work/<아이디>/<YYYY-MM-DD>-<브랜치에서 '/종류-' 뒤의 주제>.md`
 - 이 브랜치의 기록 파일이 이미 있으면 새로 만들지 않고, 맨 아래에 `## 세션 N (YYYY-MM-DD)` 를 붙여 같은 칸들을 이어 쓴다
 

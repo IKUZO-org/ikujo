@@ -21,18 +21,14 @@ PRD 등 네 문서의 원본은 팀 Hatch다. 여기 있는 것은 사본이고 
 3. 첫 세션에 Claude가 깃허브 아이디를 묻고 `git config ikujo.login <아이디>`로 이 레포에만 저장한다
 4. 비밀 값(.env)은 깃허브나 채팅이 아니라 직접 받아서 `.env.local`에 넣는다. 커밋되지 않는다
 
+## 브랜치
+- `develop`: 개발이 모이는 곳 (기본 브랜치). **모든 작업 PR은 여기로**
+- `main`: 실제 출시본. PO가 출시를 정할 때만 `develop` → `main` 출시 PR로 합친다
+
 ## 일하는 순서 (요약, 자세히는 [docs/rules.md](docs/rules.md))
-1. 이슈 만들기 (템플릿 "할 일")
-2. 브랜치 `<깃허브아이디>/<종류>-<주제>` (예: `hyeon/feat-room-lobby`)
+1. **이슈 먼저** (템플릿 "할 일" 또는 "버그"). 이슈 없이 시작하지 않는다
+2. `develop` 에서 브랜치 `<깃허브아이디>/<종류>-<이슈번호>-<주제>` (예: `hyeon/feat-12-room-lobby`)
 3. 작업 → **작업 기록** `docs/work/<깃허브아이디>/`에 남기기 (Claude가 `worklog` skill로 쓴다)
-4. typecheck, lint, test → push → PR (본문에 `Closes #이슈`)
-5. PR 검사 두 개가 초록이어야 한다: 작업 기록 있음, 비밀 값 없음
+4. typecheck, lint, test → push → PR을 `develop` 으로 (본문 첫 줄 `Closes #이슈`)
+5. PR 검사 세 개가 초록이어야 한다: `issue`(이슈 연결), `worklog`(작업 기록), `secrets`(비밀 값 없음)
 6. 다른 사람 1명 리뷰 승인 → Squash 머지 (사람이 한다)
-
-## 관리자가 깃허브 화면에서 한 번 켤 것
-Settings → Branches → `main` 규칙 추가:
-- Require a pull request before merging, Required approvals 1
-- Require status checks to pass: `worklog`, `secrets`
-- Do not allow bypassing the above settings
-
-Settings → General → Pull Requests: "Allow squash merging"만 켜기.
