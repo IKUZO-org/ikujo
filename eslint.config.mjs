@@ -1,17 +1,20 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import prettier from "eslint-config-prettier/flat";
 
 // className 에 넓은 화면 분기(sm:, md:, lg:, xl:, 2xl:)를 쓰지 않는다 (DESIGN.md §8, 모바일 기준)
 const BREAKPOINT = "/(^|\\s)(sm|md|lg|xl|2xl):/";
 const noBreakpointClass = [
   {
     selector: `JSXAttribute[name.name='className'] Literal[value=${BREAKPOINT}]`,
-    message: "넓은 화면 분기(sm:, md:, lg: 등)는 쓰지 않아요. 화면은 모바일 기준이에요 (DESIGN.md §8).",
+    message:
+      "넓은 화면 분기(sm:, md:, lg: 등)는 쓰지 않아요. 화면은 모바일 기준이에요 (DESIGN.md §8).",
   },
   {
     selector: `JSXAttribute[name.name='className'] TemplateElement[value.raw=${BREAKPOINT}]`,
-    message: "넓은 화면 분기(sm:, md:, lg: 등)는 쓰지 않아요. 화면은 모바일 기준이에요 (DESIGN.md §8).",
+    message:
+      "넓은 화면 분기(sm:, md:, lg: 등)는 쓰지 않아요. 화면은 모바일 기준이에요 (DESIGN.md §8).",
   },
 ];
 
@@ -59,6 +62,8 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": "off",
     },
   },
+  // 포맷은 Prettier 가 맡는다. ESLint 의 포맷 규칙과 겹치지 않게 끈다
+  prettier,
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
