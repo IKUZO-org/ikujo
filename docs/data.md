@@ -1,4 +1,4 @@
-<!-- 원본: Hatch 팀 문서 "데이터 구성" 2판. 고칠 때는 Hatch에서 고치고 이 사본을 바꾼다 -->
+<!-- 원본: Hatch 팀 문서 "데이터 구성" 3판. 고칠 때는 Hatch에서 고치고 이 사본을 바꾼다 -->
 # 데이터 구성 — 「LAST ONE」
 
 ## 0. 문서 정보
@@ -12,7 +12,7 @@
 원칙
 - **비밀은 서버와 그 사람만.** 다른 사람의 배정, 범인, 개별 투표는 RLS로 막아서 개발자 도구로도 못 본다 (NFR-004)
 - **단계는 한 곳.** `games.phase`가 유일한 진실이다. 폰은 읽기만 한다
-- **손님도 같은 규칙.** 손님은 Supabase 익명 로그인으로 `auth.uid()`를 갖는다. 로그인한 사람과 같은 RLS를 탄다 `제안`
+- **손님도 같은 규칙.** 모두 손님이다(로그인 없음, D-018). Supabase 익명 세션으로 `auth.uid()`를 갖고 같은 RLS를 탄다
 - **시나리오는 코드와 함께.** 시나리오 내용은 DB가 아니라 `scenarios/*.json`(버전 관리, 리뷰)
 
 ---
@@ -20,7 +20,7 @@
 ## 1. 표 한눈에
 ```
 auth.users (Supabase)
-  └─ profiles 1:1            로그인한 사람만 (완료 기록)
+  └─ profiles 1:1            보류 (로그인 없음, D-018)
 rooms ──< players            방과 참가자 (손님 포함)
 rooms ──< games              판 (다시 하기면 여러 개)
 games ──< assignments        자리마다 인물, 비밀, 단서 (본인만)
@@ -29,19 +29,19 @@ games ──< readies            준비/확인 표시
 games ──< votes              투표 (본인만, 집계는 함수)
 games ──< ghost_actions      속삭임, 출몰
 games ── 1 reveals           해설 (reveal 단계부터)
-profiles ──< completions     완료 기록
+profiles ──< completions     보류 (FR-090 보류)
 events                       기록 (분석)
 ```
 
 ## 2. 표 정의
 
-### profiles (로그인한 사람만)
+### profiles `보류` (D-018)
+- 로그인이 없어 지금은 쓰지 않는다. 표는 2단계에서 이미 만들었다. 지울지, 둘지는 개발이 정한다
 | 칸 | 형 | 설명 |
 | --- | --- | --- |
 | user_id | uuid PK → auth.users | |
 | nickname | text 1~10 | 기본 닉네임 |
 | created_at | timestamptz | |
-- 익명(손님) 사용자는 profiles를 만들지 않는다. 탈퇴하면 auth.users 삭제 → cascade (PRD §19)
 
 ### rooms
 | 칸 | 형 | 설명 |
@@ -148,7 +148,7 @@ events                       기록 (분석)
 | created_at | timestamptz | |
 - RLS: 그 판 참가자 + `games.phase in ('reveal','ended')`일 때만
 
-### completions (로그인한 사람만, FR-090)
+### completions `보류` (FR-090 보류, D-018)
 | 칸 | 형 | 설명 |
 | --- | --- | --- |
 | user_id | uuid → profiles | |
@@ -235,13 +235,12 @@ CAG의 고정 맥락이자 규칙 검사의 기준. LLM과 서버가 같은 파�
 
 - 폰은 신호를 놓쳐도 되게 만든다: 화면을 열 때, 신호를 받을 때, 타이머가 0일 때 `getRoomState`를 다시 읽는다 (NFR-001, NFR-002)
 
-## 6. 보관과 삭제 (OQ-002 일부)
+## 6. 보관과 삭제 (D-019)
 | 데이터 | 보관 |
 | --- | --- |
 | 손님 익명 사용자 | 판이 끝나고 7일 뒤 삭제 `제안` |
-| 끝난 방, 판, 배정, 투표 | `미정` (OQ-002). 1차 개발은 30일 뒤 삭제 `제안` |
+| 끝난 방, 판, 배정, 투표 | 30일 뒤 삭제 `확정` (D-019) |
 | ghost_actions.body | 판이 끝나면 지움 `제안` |
-| completions | 탈퇴 전까지 |
 | events | 개인 식별 없이 보관 |
 
 ## 7. 마이그레이션 순서
