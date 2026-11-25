@@ -1,6 +1,6 @@
 // 서버 시각 보정과 남은 시간 (#21)
 import { describe, expect, it } from "vitest";
-import { clockOffsetMs, remainingMs } from "@/lib/room-clock";
+import { clockOffsetMs, formatRemaining, remainingMs } from "@/lib/room-clock";
 
 const server = "2026-01-01T00:00:10.000Z";
 const serverMs = Date.parse(server);
@@ -27,5 +27,18 @@ describe("remainingMs", () => {
 
   it("마감이 없으면 null", () => {
     expect(remainingMs(null, serverMs, 0)).toBeNull();
+  });
+});
+
+describe("formatRemaining", () => {
+  it("mm:ss, 초는 올림", () => {
+    expect(formatRemaining(8 * 60_000)).toBe("08:00");
+    expect(formatRemaining(61_000)).toBe("01:01");
+    expect(formatRemaining(200)).toBe("00:01");
+    expect(formatRemaining(0)).toBe("00:00");
+  });
+
+  it("null 이면 빈 문자열", () => {
+    expect(formatRemaining(null)).toBe("");
   });
 });

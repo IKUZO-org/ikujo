@@ -10,14 +10,15 @@ import { useRoomState } from "@/lib/use-room-state";
 import { leaveRoom } from "@/server/actions/leave-room";
 import { startGame } from "@/server/actions/start-game";
 import type { RoomState } from "@/server/rooms/core";
+import { PhaseBar } from "./phase-bar";
 
 const MIN_PLAYERS = 4;
 const MAX_PLAYERS = 6;
 
-export function RoomView() {
+export function RoomView({ title }: { title: string }) {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
-  const { state, error: loadError, reload: load } = useRoomState(code);
+  const { state, error: loadError, reload: load, remainingMs } = useRoomState(code);
 
   if (loadError) {
     return (
@@ -39,9 +40,12 @@ export function RoomView() {
 
   // 다음 단계 화면(S-06~)은 단계 5, 7에서. 지금은 진행 중임만 보여 준다
   return (
-    <Screen>
-      <p className="text-(length:--text-lg)">진행자가 사건을 준비하고 있어요</p>
-    </Screen>
+    <>
+      <PhaseBar title={title} phase={state.game?.phase ?? null} remainingMs={remainingMs} />
+      <Screen>
+        <p className="text-(length:--text-lg)">진행자가 사건을 준비하고 있어요</p>
+      </Screen>
+    </>
   );
 }
 

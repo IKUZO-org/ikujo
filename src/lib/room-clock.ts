@@ -16,3 +16,12 @@ export function remainingMs(
   if (phaseEndsAt === null) return null;
   return Math.max(0, Date.parse(phaseEndsAt) - (phoneNowMs + offsetMs));
 }
+
+/** 남은 시간(ms)을 mm:ss 로. 초는 올림 (0.2초 남으면 00:01). null 이면 빈 문자열 */
+export function formatRemaining(ms: number | null): string {
+  if (ms === null) return "";
+  const total = Math.ceil(Math.max(0, ms) / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
