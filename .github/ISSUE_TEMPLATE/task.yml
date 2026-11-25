@@ -1,6 +1,6 @@
 name: 할 일
 description: 개발 단계나 기능 하나
-title: "[단계 N] "
+title: "[단계 N] "  # 문서 고치기는 [문서], 세팅은 [세팅]
 body:
   - type: input
     id: refs
