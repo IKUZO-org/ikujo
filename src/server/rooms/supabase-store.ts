@@ -16,7 +16,12 @@ const ROOM_COLS = "id, code, status, host_player_id";
 const PLAYER_COLS = "id, room_id, user_id, is_guest, nickname, seat, left_at";
 const GAME_COLS = "id, phase, phase_ends_at";
 
-type RoomDb = { id: string; code: string; status: RoomRow["status"]; host_player_id: string | null };
+type RoomDb = {
+  id: string;
+  code: string;
+  status: RoomRow["status"];
+  host_player_id: string | null;
+};
 type PlayerDb = {
   id: string;
   room_id: string;
@@ -96,7 +101,10 @@ export function supabaseRoomStore(db: Db): RoomStore {
     },
 
     async setHost(roomId, playerId) {
-      const { error } = await db.from("rooms").update({ host_player_id: playerId }).eq("id", roomId);
+      const { error } = await db
+        .from("rooms")
+        .update({ host_player_id: playerId })
+        .eq("id", roomId);
       check(error);
     },
 
@@ -210,7 +218,9 @@ export function supabaseRoomStore(db: Db): RoomStore {
 
     async logEvent(name, { roomId, gameId, ...props }) {
       // 기록이 실패해도 동작은 계속한다
-      await db.from("events").insert({ name, room_id: roomId ?? null, game_id: gameId ?? null, props });
+      await db
+        .from("events")
+        .insert({ name, room_id: roomId ?? null, game_id: gameId ?? null, props });
     },
   };
 }

@@ -7,5 +7,4 @@ export const roomChannel = (roomId: string) => `room:${roomId}`;
 export const SIGNAL_EVENT = "signal";
 
 export type RoomSignal =
-  | { type: "players" }
-  | { type: "phase"; phase: string; endsAt: string | null };
+  { type: "players" } | { type: "phase"; phase: string; endsAt: string | null };

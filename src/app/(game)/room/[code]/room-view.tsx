@@ -56,14 +56,21 @@ export function RoomView() {
 
   if (loadError) {
     return (
-      <Screen bottom={<Link href="/" className="flex min-h-11 items-center justify-center">홈으로</Link>}>
+      <Screen
+        bottom={
+          <Link href="/" className="flex min-h-11 items-center justify-center">
+            홈으로
+          </Link>
+        }
+      >
         <ErrorLine message={loadError} />
       </Screen>
     );
   }
   if (!state) return <Screen>{null}</Screen>;
 
-  if (state.status === "lobby") return <Lobby state={state} onLeft={() => router.push("/")} reload={load} />;
+  if (state.status === "lobby")
+    return <Lobby state={state} onLeft={() => router.push("/")} reload={load} />;
 
   // 다음 단계 화면(S-06~)은 단계 5, 7에서. 지금은 진행 중임만 보여 준다
   return (
@@ -75,7 +82,15 @@ export function RoomView() {
 
 // S-05 대기실 (FR-012, FR-013) -----------------------------------------------------
 
-function Lobby({ state, onLeft, reload }: { state: RoomState; onLeft: () => void; reload: () => Promise<void> }) {
+function Lobby({
+  state,
+  onLeft,
+  reload,
+}: {
+  state: RoomState;
+  onLeft: () => void;
+  reload: () => Promise<void>;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -155,9 +170,13 @@ function Lobby({ state, onLeft, reload }: { state: RoomState; onLeft: () => void
           >
             <span>
               {p.nickname}
-              {p.id === state.me.playerId && <span className="text-(--color-text-muted)"> (나)</span>}
+              {p.id === state.me.playerId && (
+                <span className="text-(--color-text-muted)"> (나)</span>
+              )}
             </span>
-            {p.isHost && <span className="text-(length:--text-sm) text-(--color-text-muted)">방장</span>}
+            {p.isHost && (
+              <span className="text-(length:--text-sm) text-(--color-text-muted)">방장</span>
+            )}
           </li>
         ))}
       </ul>

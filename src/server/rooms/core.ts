@@ -245,7 +245,10 @@ export type RoomState = {
  * 공용 정보만 돌려준다: 방, 참가자 닉네임과 seat, 단계. user_id, 배정, 범인은 넣지 않는다 (spec §4, AC-030).
  * 화면 주소가 방 코드라 코드로 찾는다 (진행 중 방끼리 코드는 겹치지 않는다).
  */
-export async function getRoomState(deps: Deps, input: { code: string }): Promise<Result<{ state: RoomState }>> {
+export async function getRoomState(
+  deps: Deps,
+  input: { code: string },
+): Promise<Result<{ state: RoomState }>> {
   const code = roomCodeSchema.safeParse(input.code);
   if (!code.success) return fail(MSG.notFound);
   const { store, user } = deps;
@@ -297,7 +300,10 @@ export function uniqueNickname(name: string, players: Pick<PlayerRow, "nickname"
 }
 
 /** 나간 방장의 seat 다음 사람. 뒤에 없으면 맨 앞 사람 (BR-012) */
-export function nextHost<T extends Pick<PlayerRow, "seat">>(leavingSeat: number, remaining: T[]): T | null {
+export function nextHost<T extends Pick<PlayerRow, "seat">>(
+  leavingSeat: number,
+  remaining: T[],
+): T | null {
   const sorted = [...remaining].sort((a, b) => a.seat - b.seat);
   return sorted.find((p) => p.seat > leavingSeat) ?? sorted[0] ?? null;
 }

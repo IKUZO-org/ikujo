@@ -79,5 +79,8 @@ export interface RoomStore {
   latestGame(roomId: string): Promise<GameRow | null>;
 
   /** 기록 (spec §7). 개인 식별 정보는 넣지 않는다 (data §6) */
-  logEvent(name: string, props: { roomId?: string; gameId?: string; [k: string]: unknown }): Promise<void>;
+  logEvent(
+    name: string,
+    props: { roomId?: string; gameId?: string; [k: string]: unknown },
+  ): Promise<void>;
 }

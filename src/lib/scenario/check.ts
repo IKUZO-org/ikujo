@@ -53,9 +53,21 @@ export function checkScenario(input: unknown): ScenarioCheck {
     if (seen.has(x)) errors.push(`ID 겹침: ${x}`);
     seen.add(x);
   }
-  dupes(s.culprits.map((c) => c.character), "범인 겹침", errors);
-  dupes(s.rounds.map((r) => String(r.round)), "라운드 겹침", errors);
-  dupes(s.redHerrings.map((r) => r.clue), "레드 헤링 겹침", errors);
+  dupes(
+    s.culprits.map((c) => c.character),
+    "범인 겹침",
+    errors,
+  );
+  dupes(
+    s.rounds.map((r) => String(r.round)),
+    "라운드 겹침",
+    errors,
+  );
+  dupes(
+    s.redHerrings.map((r) => r.clue),
+    "레드 헤링 겹침",
+    errors,
+  );
 
   // 없는 ID 참조
   const chars = new Set(s.characters.map((c) => c.id));

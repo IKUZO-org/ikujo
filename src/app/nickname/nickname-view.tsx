@@ -19,7 +19,9 @@ export function NicknameView() {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const r = code ? await joinRoom({ code, nickname: trimmed }) : await createRoom({ nickname: trimmed });
+      const r = code
+        ? await joinRoom({ code, nickname: trimmed })
+        : await createRoom({ nickname: trimmed });
       if ("error" in r) return setError(r.error);
       router.replace(`/room/${r.code}`);
     });

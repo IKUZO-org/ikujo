@@ -36,7 +36,8 @@ export function memoryStore(): MemoryStore {
       return r ? { ...r } : null;
     },
     async insertRoom(code) {
-      if (s.rooms.some((r) => r.code === code && r.status !== "ended")) throw new UniqueViolation("code");
+      if (s.rooms.some((r) => r.code === code && r.status !== "ended"))
+        throw new UniqueViolation("code");
       const room: RoomRow = { id: id(), code, status: "lobby", hostPlayerId: null };
       s.rooms.push(room);
       return { ...room };
@@ -51,15 +52,20 @@ export function memoryStore(): MemoryStore {
       return true;
     },
     async listPlayers(roomId) {
-      return s.players.filter((p) => p.roomId === roomId).sort((a, b) => a.seat - b.seat).map((p) => ({ ...p }));
+      return s.players
+        .filter((p) => p.roomId === roomId)
+        .sort((a, b) => a.seat - b.seat)
+        .map((p) => ({ ...p }));
     },
     async insertPlayer(p) {
       const hook = s.beforeInsertPlayer;
       s.beforeInsertPlayer = undefined;
       hook?.();
       if (p.seat < 1 || p.seat > 6) throw new Error("check violation: seat");
-      if (s.players.some((x) => x.roomId === p.roomId && x.userId === p.userId)) throw new UniqueViolation("user");
-      if (s.players.some((x) => x.roomId === p.roomId && x.seat === p.seat)) throw new UniqueViolation("seat");
+      if (s.players.some((x) => x.roomId === p.roomId && x.userId === p.userId))
+        throw new UniqueViolation("user");
+      if (s.players.some((x) => x.roomId === p.roomId && x.seat === p.seat))
+        throw new UniqueViolation("seat");
       const row: PlayerRow = { ...p, id: id(), leftAt: null };
       s.players.push(row);
       return { ...row };
@@ -72,7 +78,13 @@ export function memoryStore(): MemoryStore {
       s.players.find((p) => p.id === playerId)!.leftAt = leftAt;
     },
     async createGame(game) {
-      const row = { id: id(), phase: game.phase, phaseEndsAt: game.phaseEndsAt, roomId: game.roomId, game };
+      const row = {
+        id: id(),
+        phase: game.phase,
+        phaseEndsAt: game.phaseEndsAt,
+        roomId: game.roomId,
+        game,
+      };
       s.games.push(row);
       return { id: row.id, phase: row.phase, phaseEndsAt: row.phaseEndsAt };
     },

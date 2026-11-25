@@ -37,7 +37,7 @@ function phone(userId: string, opts: { random?: () => number } = {}): Deps {
       signals.push({ roomId, signal });
     },
     scenario,
-    random: opts.random ?? (() => ((seed = (seed * 9301 + 49297) % 233280) / 233280)),
+    random: opts.random ?? (() => (seed = (seed * 9301 + 49297) % 233280) / 233280),
     now: () => new Date("2026-11-25T12:00:00Z"),
   };
 }
@@ -79,8 +79,12 @@ describe("createRoom", () => {
   });
 
   it("닉네임 1~10자 (FR-003)", async () => {
-    expect(await createRoom(phone("u1"), { nickname: "   " })).toEqual({ error: "닉네임을 입력해 주세요" });
-    expect(await createRoom(phone("u1"), { nickname: "12345678901" })).toEqual({ error: "닉네임은 10자까지예요" });
+    expect(await createRoom(phone("u1"), { nickname: "   " })).toEqual({
+      error: "닉네임을 입력해 주세요",
+    });
+    expect(await createRoom(phone("u1"), { nickname: "12345678901" })).toEqual({
+      error: "닉네임은 10자까지예요",
+    });
     expect(await createRoom(phone("u1"), { nickname: "1234567890" })).toMatchObject({ ok: true });
   });
 });
@@ -106,7 +110,9 @@ describe("joinRoom", () => {
     });
 
     store.rooms[0].status = "playing";
-    expect(await joinRoom(phone("y"), { code: full.code })).toEqual({ error: "이미 시작한 방이에요" });
+    expect(await joinRoom(phone("y"), { code: full.code })).toEqual({
+      error: "이미 시작한 방이에요",
+    });
   });
 
   it("끝난 방 코드는 없는 방", async () => {
@@ -149,7 +155,15 @@ describe("joinRoom", () => {
     const host = await roomWith(2);
     // 내가 seat 3 에 넣기 직전에 다른 폰이 seat 3 을 가져간다
     store.beforeInsertPlayer = () => {
-      store.players.push({ id: "other", roomId: host.roomId, userId: "other", isGuest: true, nickname: "x", seat: 3, leftAt: null });
+      store.players.push({
+        id: "other",
+        roomId: host.roomId,
+        userId: "other",
+        isGuest: true,
+        nickname: "x",
+        seat: 3,
+        leftAt: null,
+      });
     };
     const r = await joinRoom(phone("me"), { code: host.code, nickname: "나" });
     expect(r).toMatchObject({ ok: true });
@@ -159,13 +173,25 @@ describe("joinRoom", () => {
   it("동시에 들어와 마지막 자리를 뺏기면 꽉 참", async () => {
     const host = await roomWith(5);
     store.beforeInsertPlayer = () => {
-      store.players.push({ id: "other", roomId: host.roomId, userId: "other", isGuest: true, nickname: "x", seat: 6, leftAt: null });
+      store.players.push({
+        id: "other",
+        roomId: host.roomId,
+        userId: "other",
+        isGuest: true,
+        nickname: "x",
+        seat: 6,
+        leftAt: null,
+      });
     };
-    expect(await joinRoom(phone("me"), { code: host.code, nickname: "나" })).toEqual({ error: MSG.full });
+    expect(await joinRoom(phone("me"), { code: host.code, nickname: "나" })).toEqual({
+      error: MSG.full,
+    });
   });
 
   it("코드 형식이 틀리면 한 줄 안내", async () => {
-    expect(await joinRoom(phone("x"), { code: "12ab" })).toEqual({ error: "방 코드는 숫자 6자리예요" });
+    expect(await joinRoom(phone("x"), { code: "12ab" })).toEqual({
+      error: "방 코드는 숫자 6자리예요",
+    });
   });
 });
 
@@ -207,7 +233,9 @@ describe("leaveRoom", () => {
 
   it("참가자가 아니면 거절", async () => {
     const host = await roomWith(2);
-    expect(await leaveRoom(phone("stranger"), { roomId: host.roomId })).toEqual({ error: MSG.notMember });
+    expect(await leaveRoom(phone("stranger"), { roomId: host.roomId })).toEqual({
+      error: MSG.notMember,
+    });
   });
 
   it("방 id 형식이 틀리면 없는 방", async () => {
@@ -219,7 +247,9 @@ describe("leaveRoom", () => {
 describe("startGame", () => {
   it("AC-012: 3명이면 시작할 수 없다", async () => {
     const host = await roomWith(3);
-    expect(await startGame(phone("u1"), { roomId: host.roomId })).toEqual({ error: "4명부터 시작해요" });
+    expect(await startGame(phone("u1"), { roomId: host.roomId })).toEqual({
+      error: "4명부터 시작해요",
+    });
     expect(store.rooms[0].status).toBe("lobby");
     expect(store.games).toHaveLength(0);
   });
@@ -283,7 +313,13 @@ describe("getRoomState", () => {
     const r = await getRoomState(phone("u2"), { code: host.code });
     if (!("ok" in r)) throw new Error(r.error);
     expect(r.state.me.isHost).toBe(false);
-    expect(r.state.players[0]).toEqual({ id: store.players[0].id, nickname: "방장", seat: 1, isHost: true, left: false });
+    expect(r.state.players[0]).toEqual({
+      id: store.players[0].id,
+      nickname: "방장",
+      seat: 1,
+      isHost: true,
+      left: false,
+    });
     expect(r.state.game?.phase).toBe("intro");
     const json = JSON.stringify(r);
     expect(json).not.toContain("u1");
