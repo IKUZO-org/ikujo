@@ -88,9 +88,22 @@ describe("markReady", () => {
     const again = await markReady(db, userIds[0], g, "secret");
     expect(again).toMatchObject({ ok: true, ready: 1, total: 4 });
     for (const id of userIds.slice(1)) await markReady(db, id, g, "secret");
-    expect(await advancePhase(db, userIds[0], g, "secret")).toMatchObject({
-      advanced: true,
-      phase: "r1",
-    });
+    const { data } = await db.from("games").select("phase").eq("id", g).single();
+    expect(data?.phase).toBe("r1");
+  });
+
+  it("intro 에서 모두 ready 하면 시간 전에 secret 으로 넘어간다 (마지막 두 명 동시)", async () => {
+    const g = await newGame("intro", new Date(Date.now() + 60_000).toISOString());
+    for (const id of userIds.slice(0, 2)) await markReady(db, id, g, "intro");
+    await Promise.all(userIds.slice(2).map((id) => markReady(db, id, g, "intro")));
+    const { data } = await db.from("games").select("phase").eq("id", g).single();
+    expect(data?.phase).toBe("secret");
+  });
+
+  it("r1 은 모두 눌러도 시간 전엔 안 넘어간다 (OQ-007)", async () => {
+    const g = await newGame("r1", new Date(Date.now() + 60_000).toISOString());
+    for (const id of userIds) await markReady(db, id, g, "r1");
+    const { data } = await db.from("games").select("phase").eq("id", g).single();
+    expect(data?.phase).toBe("r1");
   });
 });

@@ -7,7 +7,15 @@ import { canAdvance, endsAtFor, roundOf, type Phase } from "./phase";
 import { broadcast } from "./realtime";
 
 export type PhaseResult =
-  | { ok: true; advanced: boolean; phase: Phase; endsAt: string | null; serverNow: string }
+  | {
+      ok: true;
+      advanced: boolean;
+      // 안 넘어간 이유 (canAdvance 그대로). 폰은 too_early 일 때만 다시 시도한다
+      reason?: "stale" | "no_next" | "too_early";
+      phase: Phase;
+      endsAt: string | null;
+      serverNow: string;
+    }
   | { error: string };
 
 export type ReadyResult =
@@ -72,7 +80,14 @@ export async function advancePhase(
     playerCount: total,
   });
   if (!decision.ok) {
-    return { ok: true, advanced: false, phase: game.phase, endsAt: game.phase_ends_at, serverNow };
+    return {
+      ok: true,
+      advanced: false,
+      reason: decision.reason,
+      phase: game.phase,
+      endsAt: game.phase_ends_at,
+      serverNow,
+    };
   }
 
   const to = decision.to;
@@ -94,6 +109,7 @@ export async function advancePhase(
     return {
       ok: true,
       advanced: false,
+      reason: "stale",
       phase: latest?.phase ?? from,
       endsAt: latest?.phase_ends_at ?? null,
       serverNow,
@@ -156,5 +172,7 @@ export async function markReady(
 
   const { ready, total } = await readyCounts(db, game, phase);
   await broadcast(db, game.room_id, { type: "count", ready });
+  // 모두 눌렀으면 그 자리에서 넘긴다. 넘길지는 canAdvance 가 정한다 (r1~r3 은 시간 전엔 안 넘어감, OQ-007)
+  if (total > 0 && ready >= total) await advancePhase(db, userId, gameId, phase, now);
   return { ok: true, ready, total, serverNow };
 }
