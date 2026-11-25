@@ -53,9 +53,21 @@ export function checkScenario(input: unknown): ScenarioCheck {
     if (seen.has(x)) errors.push(`ID 겹침: ${x}`);
     seen.add(x);
   }
-  dupes(s.culprits.map((c) => c.character), "범인 겹침", errors);
-  dupes(s.rounds.map((r) => String(r.round)), "라운드 겹침", errors);
-  dupes(s.redHerrings.map((r) => r.clue), "레드 헤링 겹침", errors);
+  dupes(
+    s.culprits.map((c) => c.character),
+    "범인 겹침",
+    errors,
+  );
+  dupes(
+    s.rounds.map((r) => String(r.round)),
+    "라운드 겹침",
+    errors,
+  );
+  dupes(
+    s.redHerrings.map((r) => r.clue),
+    "레드 헤링 겹침",
+    errors,
+  );
 
   // 없는 ID 참조
   const chars = new Set(s.characters.map((c) => c.id));
@@ -106,7 +118,7 @@ export function checkScenario(input: unknown): ScenarioCheck {
 }
 
 // OQ-013: 4~5명 판에서 특징이 1명에게만 해당하는 범인은 그 인원에서 고르지 않는다 (spec §9 임시 결정)
-function unsupportedCulprits(s: Scenario): UnsupportedCulprit[] {
+export function unsupportedCulprits(s: Scenario): UnsupportedCulprit[] {
   const out: UnsupportedCulprit[] = [];
   for (const n of PLAYER_COUNTS) {
     const present = new Set(charactersFor(s, n).map((c) => c.id));

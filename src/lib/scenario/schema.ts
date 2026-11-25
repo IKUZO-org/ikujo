@@ -49,9 +49,7 @@ export const scenarioSchema = z.object({
   secrets: z.array(z.object({ id, character: id, text })),
   alibis: z.array(z.object({ id, character: id, text })),
   traits: z.array(z.object({ id, text, characters: z.array(id).min(1) })),
-  culprits: z
-    .array(z.object({ character: id, motive: text, mistake: text, trait: id }))
-    .min(1),
+  culprits: z.array(z.object({ character: id, motive: text, mistake: text, trait: id })).min(1),
   clues: z.array(clueSchema),
   redHerrings: z.array(z.object({ clue: id, suspect: id, truth: text })),
   pairs: z.array(z.object({ a: id, b: id, secret: text, tension: text })),
