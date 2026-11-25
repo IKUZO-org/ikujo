@@ -73,6 +73,22 @@ describe("advancePhase", () => {
     expect((data ?? []).every((c) => c.round === 1)).toBe(true);
   });
 
+  it("r3 에 들어가면 범인을 가리키는 공용 단서 하나만 생긴다", async () => {
+    const g = await newGame("r2", past());
+    await insert(db, "game_secrets", {
+      game_id: g,
+      culprit_player_id: players[0].id,
+      victim_player_id: players[1].id,
+      culprit_character: "villain",
+      ghost_trait: "t",
+    });
+    const r = await advancePhase(db, userIds[0], g, "r2");
+    expect(r).toMatchObject({ ok: true, advanced: true, phase: "r3" });
+    expect(JSON.stringify(r)).not.toContain("villain");
+    const { data } = await db.from("revealed_clues").select("clue_id").eq("game_id", g);
+    expect((data ?? []).map((c) => c.clue_id)).toEqual(["c-r3-02"]);
+  });
+
   it("참가자가 아니면 거절한다", async () => {
     const g = await newGame("secret", past());
     const outsider = await guest();

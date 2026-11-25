@@ -119,8 +119,20 @@ export async function advancePhase(
   // 아래는 이 단계를 넘긴 한 번의 호출만 한다
   const round = roundOf(to);
   if (round) {
+    // r3 반전 단서는 범인 후보마다 하나씩 있어서, 이번 판 범인을 가리키는 것만 연다 (BR-009, spec §5).
+    // 범인은 서버 안에서만 쓰고 응답이나 신호에 싣지 않는다
+    let culprit: string | null = null;
+    if (round === 3) {
+      const { data: secret } = await db
+        .from("game_secrets")
+        .select("culprit_character")
+        .eq("game_id", gameId)
+        .maybeSingle<{ culprit_character: string }>();
+      culprit = secret?.culprit_character ?? null;
+    }
     const clues = scenario.clues
       .filter((c) => c.round === round && c.visibility === "public")
+      .filter((c) => round !== 3 || (culprit !== null && (c.pointsTo ?? []).includes(culprit)))
       .map((c) => ({ game_id: gameId, clue_id: c.id, round, revealed_at: serverNow }));
     if (clues.length > 0) {
       await db
