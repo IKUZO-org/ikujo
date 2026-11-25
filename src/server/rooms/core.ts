@@ -244,11 +244,12 @@ export type RoomState = {
 /**
  * 공용 정보만 돌려준다: 방, 참가자 닉네임과 seat, 단계. user_id, 배정, 범인은 넣지 않는다 (spec §4, AC-030).
  * 화면 주소가 방 코드라 코드로 찾는다 (진행 중 방끼리 코드는 겹치지 않는다).
+ * serverNow: 폰이 "서버 시각 - 내 시각" 으로 남은 시간을 보정한다 (#21, 시간 기준은 서버).
  */
 export async function getRoomState(
   deps: Deps,
   input: { code: string },
-): Promise<Result<{ state: RoomState }>> {
+): Promise<Result<{ state: RoomState; serverNow: string }>> {
   const code = roomCodeSchema.safeParse(input.code);
   if (!code.success) return fail(MSG.notFound);
   const { store, user } = deps;
@@ -276,6 +277,7 @@ export async function getRoomState(
       })),
       game,
     },
+    serverNow: deps.now().toISOString(),
   };
 }
 

@@ -321,6 +321,7 @@ describe("getRoomState", () => {
       left: false,
     });
     expect(r.state.game?.phase).toBe("intro");
+    expect(r.serverNow).toBe("2026-11-25T12:00:00.000Z");
     const json = JSON.stringify(r);
     expect(json).not.toContain("u1");
     expect(json).not.toContain("culprit");
