@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import liveDeath from "../scenarios/live-death.json";
 import type { RoomSignal } from "@/lib/realtime";
 import { scenarioSchema } from "@/lib/scenario/schema";
+import { assignByRule } from "@/server/assign";
 import {
   createRoom,
   getRoomState,
@@ -39,6 +40,7 @@ function phone(userId: string, opts: { random?: () => number } = {}): Deps {
     scenario,
     random: opts.random ?? (() => (seed = (seed * 9301 + 49297) % 233280) / 233280),
     now: () => new Date("2026-11-25T12:00:00Z"),
+    assignModel: null,
   };
 }
 
@@ -303,6 +305,22 @@ describe("startGame", () => {
     };
     await expect(startGame(phone("u1"), { roomId: host.roomId })).rejects.toThrow("db down");
     expect(store.rooms[0].status).toBe("lobby");
+  });
+
+  it("AI 배정이 맞으면 assignment_source=ai, 응답과 신호에 범인 없음 (spec §5)", async () => {
+    const host = await roomWith(4);
+    const seats = store.players.map((p) => ({ id: p.id, seat: p.seat }));
+    const plan = assignByRule(scenario, seats, () => 0.3);
+    const deps = {
+      ...phone("u1"),
+      assignModel: { name: "fake", complete: async () => JSON.stringify(plan) },
+    };
+    const r = await startGame(deps, { roomId: host.roomId });
+    expect(store.games[0].game.assignmentSource).toBe("ai");
+    expect(store.games[0].game.secret.culpritCharacter).toBe(plan.culprit);
+    const out = JSON.stringify([r, signals.at(-1)]);
+    expect(out).not.toContain(plan.culprit);
+    expect(out).not.toContain(store.games[0].game.secret.culpritPlayerId);
   });
 });
 

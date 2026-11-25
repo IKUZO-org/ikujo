@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "./db";
 import type { Deps } from "./rooms/core";
 import { supabaseRoomStore } from "./rooms/supabase-store";
+import { getAssignModel } from "./llm";
 import { loadScenario } from "./scenario";
 
 export async function actionDeps(): Promise<Deps> {
@@ -29,6 +30,7 @@ export async function actionDeps(): Promise<Deps> {
       }
     },
     scenario: loadScenario(),
+    assignModel: getAssignModel(),
     random: Math.random,
     now: () => new Date(),
   };

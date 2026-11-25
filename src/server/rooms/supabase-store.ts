@@ -179,6 +179,7 @@ export function supabaseRoomStore(db: Db): RoomStore {
               victim_player_id: game.secret.victimPlayerId,
               culprit_character: game.secret.culpritCharacter,
               ghost_trait: game.secret.ghostTrait,
+              llm_raw: game.secret.llmRaw ?? null,
             })
           ).error,
         );
@@ -192,6 +193,7 @@ export function supabaseRoomStore(db: Db): RoomStore {
                 secret_id: a.secretId,
                 alibi_id: a.alibiId,
                 is_culprit: a.isCulprit,
+                clue_ids: a.clueIds,
               })),
             )
           ).error,

@@ -39,6 +39,8 @@ export type NewGame = {
     victimPlayerId: string;
     culpritCharacter: string;
     ghostTrait: string;
+    /** AI 응답 원문과 검사 실패 원인 (data §2). 규칙 배정만 했으면 null */
+    llmRaw: unknown;
   };
   assignments: {
     playerId: string;
@@ -46,6 +48,8 @@ export type NewGame = {
     secretId: string;
     alibiId: string;
     isCulprit: boolean;
+    /** 개인 단서 { r1: [...], r2: [...], r3: [...] } (data §2 assignments.clue_ids) */
+    clueIds: Record<"r1" | "r2" | "r3", string[]>;
   }[];
 };
 

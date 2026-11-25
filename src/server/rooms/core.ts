@@ -4,7 +4,7 @@
 import type { RoomSignal } from "@/lib/realtime";
 import { nicknameSchema, roomCodeSchema, roomIdSchema } from "@/lib/schemas";
 import type { Scenario } from "@/lib/scenario/schema";
-import { ruleAssignStub } from "../assign";
+import { chooseAssignment, type AssignModel } from "../assign-ai";
 import { UniqueViolation, type PlayerRow, type RoomRow, type RoomStore } from "./store";
 
 export const MIN_PLAYERS = 4;
@@ -30,6 +30,10 @@ export type Deps = {
   scenario: Scenario;
   random: () => number;
   now: () => Date;
+  /** AI 배정 모델. 없으면(OQ-003 미정, 키 없음) 규칙 배정 */
+  assignModel: AssignModel | null;
+  /** AI 배정 제한 시간. 기본 15초 (NFR-003) */
+  assignTimeoutMs?: number;
 };
 
 export type Fail = { error: string };
@@ -199,26 +203,29 @@ export async function startGame(
   if (!(await store.updateRoomStatus(room.id, "lobby", "playing"))) return fail(MSG.started);
 
   try {
-    // 배정 (spec §5). 지금은 규칙 배정 스텁, LLM 배정은 단계 5
-    const assignment = ruleAssignStub(
-      deps.scenario,
-      players.map((p) => p.id),
-      deps.random,
-    );
+    // 배정 (spec §5): AI 1번 → 검사 실패면 1번 더 → 실패 또는 15초 초과면 규칙 배정 (NFR-003)
+    const { assignment, source } = await chooseAssignment({
+      scenario: deps.scenario,
+      players: players.map((p) => ({ id: p.id, seat: p.seat })),
+      model: deps.assignModel,
+      random: deps.random,
+      timeoutMs: deps.assignTimeoutMs,
+    });
+    // 타이머는 배정이 끝난 뒤부터 (AI 가 오래 걸려도 intro 3분을 다 쓴다)
     const endsAt = new Date(deps.now().getTime() + INTRO_MS).toISOString();
     const game = await store.createGame({
       roomId: room.id,
       playerCount: players.length,
       phase: "intro",
       phaseEndsAt: endsAt,
-      assignmentSource: "rule",
+      assignmentSource: source,
       ...assignment,
     });
     await store.logEvent("game_started", {
       roomId: room.id,
       gameId: game.id,
       players: players.length,
-      assignmentSource: "rule",
+      assignmentSource: source,
     });
     // 신호에는 단계만. 범인, 배정은 넣지 않는다 (data §5)
     await deps.broadcast(room.id, { type: "phase", phase: game.phase, endsAt: game.phaseEndsAt });
