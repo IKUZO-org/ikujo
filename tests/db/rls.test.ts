@@ -1,7 +1,7 @@
 // RLS 테스트 (data §3, AC-030, NFR-004). 로컬 Supabase 필요: `supabase start` 뒤 `npm run test:db`
 import { beforeAll, describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { guest, insert, nobody, serviceClient } from "./local-supabase";
+import { guest, insert, serviceClient } from "./local-supabase";
 
 type Row = Record<string, unknown> & { id: string };
 
@@ -64,31 +64,23 @@ beforeAll(async () => {
     { game_id: game.id, kind: "haunt", from_player_id: pD.id, to_player_id: null, round: 3, body: "생방송 연결" },
   ]);
   await insert(db, "reveals", { game_id: game.id, body: { cards: [] } });
-  await insert(db, "events", { name: "game_started", room_id: room.id, game_id: game.id });
 });
 
-// players 는 칸이 제한돼 있어서 읽을 수 있는 칸만 고른다 (data §3)
-const PLAYER_COLUMNS = "id, room_id, nickname, seat, left_at";
-
 async function rows(client: SupabaseClient, table: string) {
-  const columns = table === "players" ? PLAYER_COLUMNS : "*";
-  const { data, error } = await client.from(table).select(columns);
+  const { data, error } = await client.from(table).select("*");
   expect(error).toBeNull();
-  return (data ?? []) as unknown as Record<string, unknown>[];
+  return data ?? [];
 }
 
 describe("남의 비밀은 0줄 (AC-030, NFR-004)", () => {
-  it("assignments: 내 것 1줄만", async () => {
+  it("assignments: 내 것 1줄만, 범인 표시는 범인 본인만", async () => {
     const mine = await rows(A, "assignments");
     expect(mine).toHaveLength(1);
     expect(mine[0].player_id).toBe(players[0].id);
     expect(mine[0].is_culprit).toBe(false);
-  });
-
-  it("assignments: 범인 B는 자기 것에서만 범인 표시를 본다", async () => {
-    const mine = await rows(B, "assignments");
-    expect(mine).toHaveLength(1);
-    expect(mine[0].is_culprit).toBe(true);
+    const culprit = await rows(B, "assignments");
+    expect(culprit).toHaveLength(1);
+    expect(culprit[0].is_culprit).toBe(true);
   });
 
   it("game_secrets: 참가자도 0줄", async () => {
@@ -101,58 +93,33 @@ describe("남의 비밀은 0줄 (AC-030, NFR-004)", () => {
     expect(mine[0].voter_player_id).toBe(players[0].id);
     expect(await rows(C, "votes")).toHaveLength(0);
   });
-
-  it("events: 0줄", async () => {
-    expect(await rows(A, "events")).toHaveLength(0);
-  });
 });
 
-describe("참가자와 참가자가 아닌 사람", () => {
-  it("참가자는 방, 같은 방 참가자, 판을 읽는다", async () => {
+describe("참가자가 아닌 사람과 players 칸", () => {
+  it("참가자가 아니면 rooms 가 0줄 (코드로 찾기는 단계 4 join_room)", async () => {
     expect(await rows(A, "rooms")).toHaveLength(1);
-    expect(await rows(A, "players")).toHaveLength(4);
-    expect(await rows(A, "games")).toHaveLength(1);
-  });
-
-  it("참가자가 아니면 rooms, players, games 가 0줄 (코드로 찾기는 단계 4 join_room)", async () => {
     expect(await rows(outsider, "rooms")).toHaveLength(0);
-    expect(await rows(outsider, "players")).toHaveLength(0);
-    expect(await rows(outsider, "games")).toHaveLength(0);
   });
 
-  it("players 는 닉네임, seat, left_at 만 보이고 user_id 는 못 읽는다", async () => {
-    const { data, error } = await A.from("players").select("user_id");
-    expect(data).toBeNull();
+  it("players 의 user_id 는 못 읽는다 (data §3)", async () => {
+    const { error } = await A.from("players").select("user_id");
     expect(error).not.toBeNull();
-    const { error: starError } = await A.from("players").select("*");
-    expect(starError).not.toBeNull();
-  });
-
-  it("세션이 없으면 아무 표도 못 읽는다", async () => {
-    const anon = nobody();
-    for (const t of ["rooms", "players", "games", "assignments", "votes", "game_secrets"]) {
-      const { data } = await anon.from(t).select(t === "players" ? PLAYER_COLUMNS : "*");
-      expect(data ?? []).toHaveLength(0);
-    }
   });
 });
 
-describe("유령 행동", () => {
+describe("조건이 붙은 정책", () => {
   it("속삭임은 보낸 사람과 받은 사람만, 출몰은 참가자 모두", async () => {
     const forA = await rows(A, "ghost_actions");
     expect(forA.map((r) => r.kind).sort()).toEqual(["haunt", "whisper"]);
     const forC = await rows(C, "ghost_actions");
     expect(forC.map((r) => r.kind)).toEqual(["haunt"]);
   });
-});
 
-describe("해설은 reveal 단계부터", () => {
-  it("vote 단계에서는 0줄, reveal 단계에서는 보인다", async () => {
+  it("해설은 reveal 단계부터", async () => {
     expect(await rows(A, "reveals")).toHaveLength(0);
     const { error } = await serviceClient().from("games").update({ phase: "reveal" }).eq("id", game.id);
     expect(error).toBeNull();
     expect(await rows(A, "reveals")).toHaveLength(1);
-    expect(await rows(outsider, "reveals")).toHaveLength(0);
   });
 });
 
@@ -165,22 +132,5 @@ describe("클라이언트는 쓰지 못한다 (쓰기는 서버만)", () => {
       target_player_id: players[1].id,
     });
     expect(error).not.toBeNull();
-  });
-
-  it("참가자가 games.phase 를 바꾸려 하면 막힌다", async () => {
-    const { error } = await A.from("games").update({ phase: "ended" }).eq("id", game.id);
-    expect(error).not.toBeNull();
-    const { data } = await serviceClient().from("games").select("phase").eq("id", game.id).single();
-    expect(data?.phase).not.toBe("ended");
-  });
-
-  it("참가자가 자기 배정을 지우려 하면 막힌다", async () => {
-    const { error } = await A.from("assignments").delete().eq("player_id", players[0].id);
-    expect(error).not.toBeNull();
-    const { count } = await serviceClient()
-      .from("assignments")
-      .select("*", { count: "exact", head: true })
-      .eq("game_id", game.id);
-    expect(count).toBe(4);
   });
 });

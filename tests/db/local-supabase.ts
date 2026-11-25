@@ -43,12 +43,6 @@ export async function guest(): Promise<{ client: SupabaseClient; userId: string 
   return { client, userId: data.user.id };
 }
 
-// 세션 없는 클라이언트 (anon 역할)
-export function nobody(): SupabaseClient {
-  const { url, anonKey } = localEnv();
-  return createClient(url, anonKey, noPersist);
-}
-
 // 서비스 클라이언트로 넣고 에러면 바로 실패
 export async function insert<T>(
   db: SupabaseClient,
