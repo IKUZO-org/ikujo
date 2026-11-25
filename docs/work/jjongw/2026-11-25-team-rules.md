@@ -41,3 +41,24 @@
 ## 남은 일
 - 관리자: 깃허브 Settings에서 `main` 브랜치 보호와 필수 검사(`worklog`, `secrets`) 켜기 (README 맨 아래)
 - Hatch 상단에 ikujo 이슈와 PR 알림: 별도 설계 (webhook)
+
+## 세션 2 (2026-11-25)
+
+### 할 일
+새로 clone한 사본에서 Claude가 규칙을 알아보는지 확인한다.
+
+### 한 일
+- `.claude/settings.json`: `.env.example` 은 읽을 수 있게, 비밀 파일(`.env`, `.env.local`, `.env.*.local`, `.env.production`, `.env.development`)만 막도록 좁힘
+
+### 프롬프트 요약
+1. 위 7가지 기준대로 진행
+
+### 사용한 skill
+- 없음 (`claude -p` 테스트 세션 안에서는 `worklog` skill이 쓰임)
+
+### 확인
+- 테스트 사본(아이디 `testmember`, main에서 시작)에 "README에 로컬 실행 칸 추가하고 커밋" → Claude가 `testmember/docs-readme-local-run` 브랜치를 만들고 `worklog` skill로 `docs/work/testmember/` 기록을 쓰고 같은 커밋에 넣음. 그 결과에 `check-worklog.sh` → 통과
+- 같은 사본에 가짜 `.env.local` 을 두고 "내용 보여줘" → 거절, 출력에 가짜 값 0회
+
+### 남은 일
+- 없음 (위 "남은 일"과 같음)
