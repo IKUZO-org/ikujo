@@ -34,7 +34,10 @@ async function vote(gameId: string, round: number, pairs: [number, number][]) {
 }
 
 async function tally(gameId: string, round: number) {
-  const { data, error } = await db.rpc("tally", { p_game_id: gameId, p_round: round });
+  const { data, error } = await db.rpc("tally", {
+    p_game_id: gameId,
+    p_round: round,
+  });
   expect(error).toBeNull();
   return (data as { target_player_id: string; vote_count: number }[]).map((r) => ({
     target: r.target_player_id,
@@ -52,7 +55,12 @@ beforeAll(async () => {
   p = await insert<Row>(
     db,
     "players",
-    users.map((u, i) => ({ room_id: room.id, user_id: u.userId, nickname: `t${i + 1}`, seat: i + 1 })),
+    users.map((u, i) => ({
+      room_id: room.id,
+      user_id: u.userId,
+      nickname: `t${i + 1}`,
+      seat: i + 1,
+    })),
   );
   p.sort((x, y) => Number(x.seat) - Number(y.seat));
 });
@@ -60,13 +68,23 @@ beforeAll(async () => {
 describe("tally(game_id, round)", () => {
   it("단독 최다: 1명만 돌려준다", async () => {
     const g = await newGame();
-    await vote(g, 1, [[0, 1], [2, 1], [3, 1], [1, 4]]);
+    await vote(g, 1, [
+      [0, 1],
+      [2, 1],
+      [3, 1],
+      [1, 4],
+    ]);
     expect(await tally(g, 1)).toEqual([{ target: p[1].id, count: 3 }]);
   });
 
   it("2인 동점: 동점자 둘을 돌려준다 (AC-060-2 재투표 후보)", async () => {
     const g = await newGame();
-    await vote(g, 1, [[0, 1], [2, 1], [1, 3], [4, 3]]);
+    await vote(g, 1, [
+      [0, 1],
+      [2, 1],
+      [1, 3],
+      [4, 3],
+    ]);
     const result = await tally(g, 1);
     expect(result).toHaveLength(2);
     expect(result.map((r) => r.target).sort()).toEqual([p[1].id, p[3].id].sort());
@@ -75,8 +93,16 @@ describe("tally(game_id, round)", () => {
 
   it("재투표도 동점: round 2 만 따로 센다", async () => {
     const g = await newGame();
-    await vote(g, 1, [[0, 1], [2, 1], [1, 3], [4, 3]]);
-    await vote(g, 2, [[0, 1], [1, 3]]);
+    await vote(g, 1, [
+      [0, 1],
+      [2, 1],
+      [1, 3],
+      [4, 3],
+    ]);
+    await vote(g, 2, [
+      [0, 1],
+      [1, 3],
+    ]);
     const result = await tally(g, 2);
     expect(result.map((r) => r.target).sort()).toEqual([p[1].id, p[3].id].sort());
     expect(result.every((r) => r.count === 1)).toBe(true);
@@ -89,7 +115,10 @@ describe("tally(game_id, round)", () => {
 
   it("참가자 세션으로는 부를 수 없다 (해설 전 집계 비밀, BR-001)", async () => {
     const g = await newGame();
-    const { error } = await memberClient.rpc("tally", { p_game_id: g, p_round: 1 });
+    const { error } = await memberClient.rpc("tally", {
+      p_game_id: g,
+      p_round: 1,
+    });
     expect(error).not.toBeNull();
   });
 });
