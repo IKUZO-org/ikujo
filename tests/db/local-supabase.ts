@@ -11,7 +11,9 @@ export function localEnv(): LocalEnv {
   if (cached) return cached;
   let raw: string;
   try {
-    raw = execFileSync("supabase", ["status", "-o", "json"], { encoding: "utf8" });
+    raw = execFileSync("supabase", ["status", "-o", "json"], {
+      encoding: "utf8",
+    });
   } catch {
     throw new Error("로컬 Supabase 가 꺼져 있어요. `supabase start` 를 먼저 실행해 주세요.");
   }
@@ -35,7 +37,10 @@ export function serviceClient(): SupabaseClient {
 }
 
 // 손님 한 명: 익명 로그인한 세션의 클라이언트와 사용자 id
-export async function guest(): Promise<{ client: SupabaseClient; userId: string }> {
+export async function guest(): Promise<{
+  client: SupabaseClient;
+  userId: string;
+}> {
   const { url, anonKey } = localEnv();
   const client = createClient(url, anonKey, noPersist);
   const { data, error } = await client.auth.signInAnonymously();

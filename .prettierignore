@@ -1,0 +1,17 @@
+# 생성물
+.next/
+out/
+build/
+coverage/
+next-env.d.ts
+package-lock.json
+
+# 팀 문서 사본과 작업 기록은 손으로 쓴 그대로 둔다 (docs/ 는 Hatch 원본의 사본)
+docs/
+*.md
+
+# Supabase CLI 가 만든 설정과 SQL 마이그레이션
+supabase/
+
+# 레포 설정 (PR 검사, 이슈 템플릿)은 PO 담당이라 이 포맷 대상에서 뺀다
+.github/
