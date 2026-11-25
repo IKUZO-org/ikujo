@@ -1,0 +1,76 @@
+name: pr-check
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+# develop 으로 오는 작업 PR: issue, worklog, secrets
+# main 으로 오는 출시 PR: release, secrets
+jobs:
+  issue:
+    if: github.base_ref == 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 이슈 연결 확인
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: bash scripts/check-issue.sh
+
+  release:
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: develop 에서 온 출시 PR인지 확인
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REF" != "develop" ] || [ "$HEAD_REPO" != "$REPO" ]; then
+            echo "::error::main 에는 develop 에서 오는 출시 PR만 들어와요. 작업 PR의 대상을 develop 으로 바꿔 주세요."
+            exit 1
+          fi
+          echo "출시 PR 확인"
+
+  worklog:
+    if: github.base_ref == 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 작업 기록 확인
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: bash scripts/check-worklog.sh "$BASE" "$HEAD" "$AUTHOR"
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks 받기 (버전 고정)
+        env:
+          GITLEAKS_VERSION: 8.24.0
+        run: |
+          curl -sSfL -o gl.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o sums.txt "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz$" sums.txt | sed 's/ .*$/  gl.tar.gz/' | sha256sum -c -
+          tar -xzf gl.tar.gz gitleaks
+      - name: 이 PR 커밋에서 비밀 값 찾기
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: ./gitleaks git --log-opts="$BASE..$HEAD" --redact --no-banner --exit-code 1
