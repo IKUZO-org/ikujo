@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/*
+ * 토큰 (DESIGN.md §5). 이름은 고정, 값은 상경 확정 전이라 아직 넣지 않는다.
+ * 값이 정해지면 아래 @theme 안에 CSS 변수로 둔다. 코드는 이 토큰으로만 색, 글자, 간격을 쓴다.
+ * 색: --color-bg, --color-surface, --color-text, --color-text-muted, --color-primary, --color-danger, --color-private-bg
+ * 글자: --font-body, --text-sm, --text-md, --text-lg, --text-xl
+ * 간격: --space-1 ~ --space-6
+ * 모서리, 그림자: --radius-*, --shadow-*
+ * 움직임: --duration-fast, --duration-base
+ */
+@theme {
+}
