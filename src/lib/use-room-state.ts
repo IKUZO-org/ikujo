@@ -77,8 +77,9 @@ export function useRoomState(code: string) {
       advanced.current.add(key); // 같은 (gameId, phase) 로는 한 번만
       void advance(gameId, phase).then((r) => {
         if (!alive.current) return;
-        if ("ok" in r && !r.advanced) {
-          // 아직 이르다(too_early): 잠시 뒤 다시 읽고, 그때 한 번 더 부를 수 있게 푼다
+        if ("ok" in r && r.reason === "too_early") {
+          // 아직 이르다: 잠시 뒤 다시 읽고, 그때 한 번 더 부를 수 있게 푼다.
+          // no_next(vote, revote 등), stale 은 다시 시도하지 않고 한 번 다시 읽기만 한다
           retry.current = setTimeout(() => {
             advanced.current.delete(key);
             void reload();
