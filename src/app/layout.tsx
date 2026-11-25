@@ -15,7 +15,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko">
       <body>
-        <div className="app-frame">{children}</div>
+        {/* 모바일 기준 (CLAUDE.md §2): 데스크톱에서도 가운데 최대 430px 그대로 */}
+        <div className="mx-auto min-h-dvh max-w-[430px]">{children}</div>
       </body>
     </html>
   );
