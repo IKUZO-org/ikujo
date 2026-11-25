@@ -106,7 +106,7 @@ export function checkScenario(input: unknown): ScenarioCheck {
 }
 
 // OQ-013: 4~5명 판에서 특징이 1명에게만 해당하는 범인은 그 인원에서 고르지 않는다 (spec §9 임시 결정)
-function unsupportedCulprits(s: Scenario): UnsupportedCulprit[] {
+export function unsupportedCulprits(s: Scenario): UnsupportedCulprit[] {
   const out: UnsupportedCulprit[] = [];
   for (const n of PLAYER_COUNTS) {
     const present = new Set(charactersFor(s, n).map((c) => c.id));
