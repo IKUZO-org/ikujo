@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# PR 검사 issue: 작업은 이슈부터 (CONTRIBUTING.md "이슈"). PR 본문의 Closes #N 이 이 레포의 열린 이슈(PR 아님)인지 본다
+# PR 검사 issue: 작업은 이슈부터 (CONTRIBUTING.md "이슈"). PR 본문의 Closes #N 이 이 레포의 열린 이슈(PR 아님)이고
+# 제목이 [T번호]로 시작하는지 본다 (팀 Hatch 체크리스트가 이 번호로 잇는다)
 # 쓰는 법: PR_BODY, REPO, AUTHOR 환경 변수 + gh 로그인(Actions에서는 GH_TOKEN)
 set -euo pipefail
 case "${AUTHOR:-}" in *'[bot]') echo "봇 PR이라 건너뜀: $AUTHOR"; exit 0;; esac
@@ -10,11 +11,14 @@ if [ -z "$nums" ]; then
 fi
 ok=0
 for n in $nums; do
-  if ! info=$(gh api "repos/$REPO/issues/$n" --jq '[.state, (.pull_request != null)] | @tsv' 2>/dev/null); then info=missing; fi
+  if ! info=$(gh api "repos/$REPO/issues/$n" --jq '[.state, (.pull_request != null), .title] | @tsv' 2>/dev/null); then info=missing; fi
+  title=${info#*$'\t'*$'\t'}
   case "$info" in
-    $'open\tfalse') echo "이슈 확인: #$n"; ok=1 ;;
+    $'open\tfalse\t'*)
+      if [[ "$title" =~ ^[[:space:]]*\[T[0-9]+\] ]]; then echo "이슈 확인: #$n $title"; ok=1
+      else echo "::error::#$n 이슈 제목 앞에 [T번호]가 없어요. 과제 체크리스트 번호를 붙여 주세요 (예: [T16][단계 5] ..., 표는 CONTRIBUTING.md 이슈)."; fi ;;
     missing) echo "::error::#$n 이슈가 없어요." ;;
-    *$'\ttrue') echo "::error::#$n 은 이슈가 아니라 PR이에요." ;;
+    *$'\ttrue\t'*) echo "::error::#$n 은 이슈가 아니라 PR이에요." ;;
     *) echo "::error::#$n 이슈가 닫혀 있어요." ;;
   esac
 done
