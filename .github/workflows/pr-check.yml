@@ -1,0 +1,41 @@
+name: pr-check
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  worklog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 작업 기록 확인
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: bash scripts/check-worklog.sh "$BASE" "$HEAD" "$AUTHOR"
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks 받기 (버전 고정)
+        env:
+          GITLEAKS_VERSION: 8.24.0
+        run: |
+          curl -sSfL -o gl.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o sums.txt "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz$" sums.txt | sed 's/ .*$/  gl.tar.gz/' | sha256sum -c -
+          tar -xzf gl.tar.gz gitleaks
+      - name: 이 PR 커밋에서 비밀 값 찾기
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: ./gitleaks git --log-opts="$BASE..$HEAD" --redact --no-banner --exit-code 1

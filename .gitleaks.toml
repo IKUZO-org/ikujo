@@ -1,0 +1,9 @@
+# 기본 규칙 + Supabase 새 비밀 키 (sb_secret_). publishable 키(sb_publishable_)는 브라우저용이라 넣지 않는다
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supabase-secret-key"
+description = "Supabase secret API key"
+regex = '''sb_secret_[A-Za-z0-9_-]{20,}'''
+keywords = ["sb_secret_"]
