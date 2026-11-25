@@ -10,6 +10,7 @@
 | [docs/spec.md](docs/spec.md) | 기능명세 (화면, 동작, 테스트) |
 | [docs/data.md](docs/data.md) | 데이터 구성 (표, 권한, 실시간) |
 | [docs/dev-prompt.md](docs/dev-prompt.md) | 단계별로 Claude에게 줄 말과 담당 |
+| [docs/roadmap.md](docs/roadmap.md) | 개발 로드맵 (마일스톤, 순서, 정할 것과 그때) |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 이슈, 브랜치, PR, 머지, 작업 기록 규칙. 규칙 문서 담당자 |
 | [SECURITY.md](SECURITY.md) | 키, 비밀 정보, 권한, 키가 샜을 때 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 서버, DB, 실시간, 폴더 구조 |
@@ -17,7 +18,7 @@
 | [docs/work/](docs/work/README.md) | 각자의 작업 기록 (PR마다 하나) |
 
 규칙 문서 네 개(CONTRIBUTING, SECURITY, ARCHITECTURE, DESIGN)는 담당자가 PR로 고치고 PO가 검토한다.
-PRD 등 네 문서의 원본은 팀 Hatch다. 여기 있는 것은 사본이고 파일 첫 줄에 판 번호가 있다. 고칠 일이 있으면 Hatch에 댓글이나 메모로 남긴다.
+PRD 등 다섯 문서(PRD, 기능명세, 데이터 구성, 개발 프롬프트, 로드맵)의 원본은 팀 Hatch다. 여기 있는 것은 사본이고 파일 첫 줄에 판 번호가 있다. 고칠 일이 있으면 Hatch에 댓글이나 메모로 남긴다.
 
 ## 처음 받으면
 1. `git clone https://github.com/IKUZO-org/ikujo.git && cd ikujo`
