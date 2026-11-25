@@ -67,10 +67,14 @@ beforeAll(async () => {
   await insert(db, "events", { name: "game_started", room_id: room.id, game_id: game.id });
 });
 
+// players 는 칸이 제한돼 있어서 읽을 수 있는 칸만 고른다 (data §3)
+const PLAYER_COLUMNS = "id, room_id, nickname, seat, left_at";
+
 async function rows(client: SupabaseClient, table: string) {
-  const { data, error } = await client.from(table).select("*");
+  const columns = table === "players" ? PLAYER_COLUMNS : "*";
+  const { data, error } = await client.from(table).select(columns);
   expect(error).toBeNull();
-  return data ?? [];
+  return (data ?? []) as unknown as Record<string, unknown>[];
 }
 
 describe("남의 비밀은 0줄 (AC-030, NFR-004)", () => {
@@ -116,10 +120,18 @@ describe("참가자와 참가자가 아닌 사람", () => {
     expect(await rows(outsider, "games")).toHaveLength(0);
   });
 
+  it("players 는 닉네임, seat, left_at 만 보이고 user_id 는 못 읽는다", async () => {
+    const { data, error } = await A.from("players").select("user_id");
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+    const { error: starError } = await A.from("players").select("*");
+    expect(starError).not.toBeNull();
+  });
+
   it("세션이 없으면 아무 표도 못 읽는다", async () => {
     const anon = nobody();
     for (const t of ["rooms", "players", "games", "assignments", "votes", "game_secrets"]) {
-      const { data } = await anon.from(t).select("*");
+      const { data } = await anon.from(t).select(t === "players" ? PLAYER_COLUMNS : "*");
       expect(data ?? []).toHaveLength(0);
     }
   });
@@ -155,8 +167,20 @@ describe("클라이언트는 쓰지 못한다 (쓰기는 서버만)", () => {
     expect(error).not.toBeNull();
   });
 
-  it("참가자가 games.phase 를 바꾸면 0줄이 바뀐다", async () => {
-    const { data } = await A.from("games").update({ phase: "ended" }).eq("id", game.id).select();
-    expect(data ?? []).toHaveLength(0);
+  it("참가자가 games.phase 를 바꾸려 하면 막힌다", async () => {
+    const { error } = await A.from("games").update({ phase: "ended" }).eq("id", game.id);
+    expect(error).not.toBeNull();
+    const { data } = await serviceClient().from("games").select("phase").eq("id", game.id).single();
+    expect(data?.phase).not.toBe("ended");
+  });
+
+  it("참가자가 자기 배정을 지우려 하면 막힌다", async () => {
+    const { error } = await A.from("assignments").delete().eq("player_id", players[0].id);
+    expect(error).not.toBeNull();
+    const { count } = await serviceClient()
+      .from("assignments")
+      .select("*", { count: "exact", head: true })
+      .eq("game_id", game.id);
+    expect(count).toBe(4);
   });
 });

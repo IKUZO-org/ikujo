@@ -153,3 +153,20 @@ create policy "본인 완료 기록" on public.completions
   using (user_id = auth.uid());
 
 -- events: 정책 없음. 서버만
+
+-- 쓰기 권한 회수 -----------------------------------------------------------------
+-- Supabase 는 public 표에 anon, authenticated 쓰기 권한을 기본으로 준다.
+-- 쓰기는 서버(service role)만 하므로 RLS 와 별도로 권한도 회수해 두 겹으로 막는다.
+-- TRUNCATE 는 RLS 가 적용되지 않아서 권한으로만 막을 수 있다.
+revoke insert, update, delete, truncate, references, trigger
+  on all tables in schema public from anon, authenticated;
+-- 다음 마이그레이션에서 만드는 표에도 같은 기본값을 적용한다
+alter default privileges in schema public
+  revoke insert, update, delete, truncate, references, trigger on tables from anon, authenticated;
+
+-- players: 같은 방 참가자는 닉네임, seat, left_at 만 (data §3)
+-- RLS 는 줄만 거르므로 칸은 열 단위 권한으로 제한한다. user_id, is_guest, joined_at 은 서버만.
+-- id, room_id 는 투표 대상 지정과 방 단위 조회에 필요해서 같이 연다.
+-- 클라이언트는 select("*") 대신 칸 이름을 적어서 읽는다.
+revoke select on public.players from anon, authenticated;
+grant select (id, room_id, nickname, seat, left_at) on public.players to authenticated;
