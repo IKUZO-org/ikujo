@@ -40,12 +40,11 @@ export function RoomView({ title }: { title: string }) {
 
   // 다음 단계 화면(S-06~)은 단계 5, 7에서. 지금은 진행 중임만 보여 준다
   return (
-    <>
-      <PhaseBar title={title} phase={state.game?.phase ?? null} remainingMs={remainingMs} />
-      <Screen>
-        <p className="text-(length:--text-lg)">진행자가 사건을 준비하고 있어요</p>
-      </Screen>
-    </>
+    <Screen
+      top={<PhaseBar title={title} phase={state.game?.phase ?? null} remainingMs={remainingMs} />}
+    >
+      <p className="text-(length:--text-lg)">진행자가 사건을 준비하고 있어요</p>
+    </Screen>
   );
 }
 
