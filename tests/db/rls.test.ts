@@ -50,18 +50,74 @@ beforeAll(async () => {
   });
   await insert(db, "assignments", [
     // 여러 줄을 한 번에 넣으면 빠진 칸은 기본값이 아니라 null 이 되어서 모든 칸을 채운다
-    { game_id: game.id, player_id: pA.id, character_id: "fav", secret_id: "s1", alibi_id: "a1", is_culprit: false, is_ghost: false },
-    { game_id: game.id, player_id: pB.id, character_id: "villain", secret_id: "s2", alibi_id: "a2", is_culprit: true, is_ghost: false },
-    { game_id: game.id, player_id: pC.id, character_id: "athlete", secret_id: "s3", alibi_id: "a3", is_culprit: false, is_ghost: false },
-    { game_id: game.id, player_id: pD.id, character_id: "writer", secret_id: "s4", alibi_id: "a4", is_culprit: false, is_ghost: true },
+    {
+      game_id: game.id,
+      player_id: pA.id,
+      character_id: "fav",
+      secret_id: "s1",
+      alibi_id: "a1",
+      is_culprit: false,
+      is_ghost: false,
+    },
+    {
+      game_id: game.id,
+      player_id: pB.id,
+      character_id: "villain",
+      secret_id: "s2",
+      alibi_id: "a2",
+      is_culprit: true,
+      is_ghost: false,
+    },
+    {
+      game_id: game.id,
+      player_id: pC.id,
+      character_id: "athlete",
+      secret_id: "s3",
+      alibi_id: "a3",
+      is_culprit: false,
+      is_ghost: false,
+    },
+    {
+      game_id: game.id,
+      player_id: pD.id,
+      character_id: "writer",
+      secret_id: "s4",
+      alibi_id: "a4",
+      is_culprit: false,
+      is_ghost: true,
+    },
   ]);
   await insert(db, "votes", [
-    { game_id: game.id, round: 1, voter_player_id: pA.id, target_player_id: pB.id },
-    { game_id: game.id, round: 1, voter_player_id: pB.id, target_player_id: pC.id },
+    {
+      game_id: game.id,
+      round: 1,
+      voter_player_id: pA.id,
+      target_player_id: pB.id,
+    },
+    {
+      game_id: game.id,
+      round: 1,
+      voter_player_id: pB.id,
+      target_player_id: pC.id,
+    },
   ]);
   await insert(db, "ghost_actions", [
-    { game_id: game.id, kind: "whisper", from_player_id: pD.id, to_player_id: pA.id, round: 2, body: "모자" },
-    { game_id: game.id, kind: "haunt", from_player_id: pD.id, to_player_id: null, round: 3, body: "생방송 연결" },
+    {
+      game_id: game.id,
+      kind: "whisper",
+      from_player_id: pD.id,
+      to_player_id: pA.id,
+      round: 2,
+      body: "모자",
+    },
+    {
+      game_id: game.id,
+      kind: "haunt",
+      from_player_id: pD.id,
+      to_player_id: null,
+      round: 3,
+      body: "생방송 연결",
+    },
   ]);
   await insert(db, "reveals", { game_id: game.id, body: { cards: [] } });
 });
@@ -117,7 +173,10 @@ describe("조건이 붙은 정책", () => {
 
   it("해설은 reveal 단계부터", async () => {
     expect(await rows(A, "reveals")).toHaveLength(0);
-    const { error } = await serviceClient().from("games").update({ phase: "reveal" }).eq("id", game.id);
+    const { error } = await serviceClient()
+      .from("games")
+      .update({ phase: "reveal" })
+      .eq("id", game.id);
     expect(error).toBeNull();
     expect(await rows(A, "reveals")).toHaveLength(1);
   });
