@@ -1,14 +1,12 @@
 "use client";
 // 방 화면. 서버의 상태(getRoomState)를 따라 그린다 (ARCHITECTURE.md §2-1).
-// 실시간 room:{id} 신호를 받으면 다시 읽는다. 신호에는 비밀이 없다 (data §5)
+// 읽기와 room:{id} 신호 구독은 useRoomState 가 한다. 신호에는 비밀이 없다 (data §5)
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/Button";
 import { ErrorLine, Screen } from "@/components/Screen";
-import { roomChannel, SIGNAL_EVENT } from "@/lib/realtime";
-import { createClient } from "@/lib/supabase/client";
-import { getRoomState } from "@/server/actions/get-room-state";
+import { useRoomState } from "@/lib/use-room-state";
 import { leaveRoom } from "@/server/actions/leave-room";
 import { startGame } from "@/server/actions/start-game";
 import type { RoomState } from "@/server/rooms/core";
@@ -19,40 +17,7 @@ const MAX_PLAYERS = 6;
 export function RoomView() {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
-  const [state, setState] = useState<RoomState | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const apply = useCallback((r: Awaited<ReturnType<typeof getRoomState>>) => {
-    if ("error" in r) setLoadError(r.error);
-    else {
-      setLoadError(null);
-      setState(r.state);
-    }
-  }, []);
-  const load = useCallback(() => getRoomState({ code }).then(apply), [code, apply]);
-
-  // 화면을 열 때 읽는다 (NFR-002)
-  useEffect(() => {
-    let alive = true;
-    getRoomState({ code }).then((r) => alive && apply(r));
-    return () => {
-      alive = false;
-    };
-  }, [code, apply]);
-
-  // 신호를 받을 때 다시 읽는다 (NFR-001)
-  const roomId = state?.roomId;
-  useEffect(() => {
-    if (!roomId) return;
-    const supabase = createClient();
-    const channel = supabase
-      .channel(roomChannel(roomId))
-      .on("broadcast", { event: SIGNAL_EVENT }, () => void load())
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [roomId, load]);
+  const { state, error: loadError, reload: load } = useRoomState(code);
 
   if (loadError) {
     return (
