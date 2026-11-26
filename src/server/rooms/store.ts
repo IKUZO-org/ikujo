@@ -84,6 +84,11 @@ export class UniqueViolation extends Error {
   }
 }
 
+export type GameEnd = {
+  outcome?: "caught" | "aired_off";
+  endedReason: "normal" | "culprit_left" | "cancelled" | "stale";
+};
+
 export type JoinResult =
   | { result: "not_found" }
   | {
@@ -153,8 +158,13 @@ export interface RoomStore {
   getGhostTrait(gameId: string): Promise<string | null>;
   /** 이번 판 범인 인물 ID (game_secrets.culprit_character). 다시 하기의 배정 입력에만 쓴다 (spec §5-2) */
   getCulpritCharacter(gameId: string): Promise<string | null>;
-  /** 판 단계가 from 일 때만 바꾼다. 바꿨으면 true (다시 하기, 방 끝내기를 두 번 눌러도 한 번만) */
-  updateGamePhase(gameId: string, from: string, to: string): Promise<boolean>;
+  /** 이번 판 범인 player id (game_secrets.culprit_player_id). 범인 이탈 확인에만 쓴다 (D-025) */
+  getCulpritPlayerId(gameId: string): Promise<string | null>;
+  /**
+   * 판 단계가 from 일 때만 바꾼다. 바꿨으면 true (다시 하기, 방 끝내기를 두 번 눌러도 한 번만).
+   * end: 범인 이탈로 끝낼 때 games.outcome, ended_reason (D-025)
+   */
+  updateGamePhase(gameId: string, from: string, to: string, end?: GameEnd): Promise<boolean>;
   /** 이 판의 속삭임, 출몰. 누구에게 보여 줄지는 부르는 쪽이 고른다 */
   listGhostActions(gameId: string): Promise<GhostActionRow[]>;
   /** 출몰 두 번은 UniqueViolation('haunt'), 같은 라운드 속삭임 두 번은 UniqueViolation('whisper') */

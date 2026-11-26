@@ -143,14 +143,15 @@ export async function leaveRoom(deps: Deps, input: { roomId: string }): Promise<
   // 플레이어를 지우면 DB가 host_player_id 를 null 로 바꾸므로 먼저 기억해 둔다
   const wasHost = room.hostPlayerId === me.id;
 
+  let phase: string | null = null;
   if (room.status === "lobby") {
     // 대기실: 플레이어 삭제 (spec §4, S-05)
     await store.deletePlayer(me.id);
   } else {
-    // 게임 중: left_at 기록. 단계는 계속된다 (BR-011)
-    // TODO(단계 10): 범인이 나가면 판 종료 → 해설 (OQ-006, spec §9 임시 결정)
+    // 게임 중: left_at 기록. 범인이 아니면 단계는 계속된다 (BR-011)
     if (me.leftAt) return { ok: true };
     await store.setPlayerLeftAt(me.id, deps.now().toISOString());
+    phase = (await culpritLeft(deps, room.id, me.id)) ?? null;
   }
 
   const remaining = players.filter((p) => p.id !== me.id && !p.leftAt);
@@ -162,9 +163,47 @@ export async function leaveRoom(deps: Deps, input: { roomId: string }): Promise<
     await store.setHost(room.id, nextHost(me.seat, remaining)?.id ?? null);
   }
 
-  await store.logEvent("player_left", { roomId: room.id, status: room.status });
+  // 단계는 나간 순간의 판 단계. 대기실이면 null (spec §7 player_left(단계))
+  await store.logEvent("player_left", { roomId: room.id, status: room.status, phase });
   await deps.broadcast(room.id, { type: "players" });
   return { ok: true };
+}
+
+const BEFORE_DEDUCTION = new Set(["intro", "secret"]);
+const DEDUCTION = new Set(["r1", "r2", "r3", "vote", "revote"]);
+
+/**
+ * 게임 중 나간 사람이 이번 판 범인이면 판을 끝낸다 (D-025, spec §1.1, §6). 나간 순간의 단계를 돌려준다.
+ * - intro, secret: 판 취소(ended, cancelled), 방은 lobby. 4명 이상이면 방장이 다시 시작한다
+ * - r1~revote: 바로 reveal(aired_off, culprit_left). 해설은 첫 getReveal 이 만든다 (readReveal)
+ * reveal 이후(해설의 "홈으로" 포함)는 판이 이미 끝나 아무것도 하지 않는다.
+ * 다시 들어와도 되돌리지 않는다: join_room 은 left_at 만 지운다
+ */
+async function culpritLeft(deps: Deps, roomId: string, playerId: string) {
+  const { store } = deps;
+  // 단계를 넘기는 advance 와 겹치면 조건부 update 가 실패한다. 다시 읽고 바뀐 단계로 한 번 더
+  for (let i = 0; i < 3; i++) {
+    const game = await store.latestGame(roomId);
+    if (!game) return null;
+    if (!BEFORE_DEDUCTION.has(game.phase) && !DEDUCTION.has(game.phase)) return game.phase;
+    if ((await store.getCulpritPlayerId(game.id)) !== playerId) return game.phase;
+    const cancel = BEFORE_DEDUCTION.has(game.phase);
+    const changed = cancel
+      ? await store.updateGamePhase(game.id, game.phase, "ended", { endedReason: "cancelled" })
+      : await store.updateGamePhase(game.id, game.phase, "reveal", {
+          outcome: "aired_off",
+          endedReason: "culprit_left",
+        });
+    if (!changed) continue;
+    if (cancel) await store.updateRoomStatus(roomId, "playing", "lobby");
+    await deps.broadcast(roomId, {
+      type: "phase",
+      phase: cancel ? "ended" : "reveal",
+      endsAt: null,
+    });
+    return game.phase;
+  }
+  return null;
 }
 
 // startGame -------------------------------------------------------------------
@@ -179,7 +218,8 @@ export async function startGame(
 
   const room = await store.getRoom(roomId.data);
   if (!room || room.status === "ended") return fail(MSG.notFound);
-  const lobbyPlayers = await store.listPlayers(room.id);
+  // 판 취소(D-025)로 돌아온 대기실에서 나간 사람은 인원과 배정에서 뺀다 (#72 `제안`)
+  const lobbyPlayers = (await store.listPlayers(room.id)).filter((p) => !p.leftAt);
   const me = lobbyPlayers.find((p) => p.userId === user.id);
   if (!me) return fail(MSG.notMember);
   if (room.hostPlayerId !== me.id) return fail(MSG.notHost);
@@ -192,7 +232,7 @@ export async function startGame(
   // 이 update 가 방 줄을 잠그므로 join_room 과 차례로 실행된다 (#36)
   if (!(await store.updateRoomStatus(room.id, "lobby", "playing"))) return fail(MSG.started);
   // 바꾼 뒤의 참가자로 인원 확인과 배정을 한다. 그 사이 들어온 사람도 배정을 받는다 (#36)
-  const players = await store.listPlayers(room.id);
+  const players = (await store.listPlayers(room.id)).filter((p) => !p.leftAt);
   if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) {
     await store.updateRoomStatus(room.id, "playing", "lobby");
     return fail(players.length < MIN_PLAYERS ? MSG.tooFew : MSG.full);
@@ -397,13 +437,16 @@ export async function getRoomState(
       code: room.code,
       status: room.status,
       me: { playerId: me.id, isHost: room.hostPlayerId === me.id },
-      players: players.map((p) => ({
-        id: p.id,
-        nickname: p.nickname,
-        seat: p.seat,
-        isHost: room.hostPlayerId === p.id,
-        left: p.leftAt !== null,
-      })),
+      // 대기실에는 판 취소 전에 나간 사람을 보여 주지 않는다 (#72 `제안`)
+      players: players
+        .filter((p) => room.status !== "lobby" || !p.leftAt)
+        .map((p) => ({
+          id: p.id,
+          nickname: p.nickname,
+          seat: p.seat,
+          isHost: room.hostPlayerId === p.id,
+          left: p.leftAt !== null,
+        })),
       game,
     },
     serverNow: deps.now().toISOString(),

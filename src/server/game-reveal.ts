@@ -22,11 +22,16 @@ type Secret = {
 
 async function revealInput(db: SupabaseClient, gameId: string) {
   const [game, secret, assigned, votes] = await Promise.all([
-    db.from("games").select("room_id, outcome, revote_candidates").eq("id", gameId).single<{
-      room_id: string;
-      outcome: "caught" | "aired_off" | null;
-      revote_candidates: string[] | null;
-    }>(),
+    db
+      .from("games")
+      .select("room_id, outcome, revote_candidates, ended_reason")
+      .eq("id", gameId)
+      .single<{
+        room_id: string;
+        outcome: "caught" | "aired_off" | null;
+        revote_candidates: string[] | null;
+        ended_reason: string | null;
+      }>(),
     db
       .from("game_secrets")
       .select("culprit_player_id, culprit_character, ghost_trait")
@@ -71,6 +76,7 @@ async function revealInput(db: SupabaseClient, gameId: string) {
       targetId: v.target_player_id,
     })),
     revoted: game.data!.revote_candidates !== null,
+    culpritLeft: game.data!.ended_reason === "culprit_left",
   };
   const secrets = (assigned.data ?? []).map((a) => ({
     characterId: a.character_id,

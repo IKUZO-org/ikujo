@@ -141,3 +141,76 @@ describe("replay", () => {
     expect(await castVote(db, ids[4], second.gameId, game.room_id)).toHaveProperty("error");
   });
 });
+
+describe("범인 이탈 (D-025, 008)", () => {
+  async function gameAt(phase: string) {
+    const ids = (await Promise.all([guest(), guest(), guest(), guest()])).map((u) => u.userId);
+    const phone = (userId: string): Deps => ({
+      store: supabaseRoomStore(db),
+      user: { id: userId, isGuest: true },
+      broadcast: async () => {},
+      scenario,
+      random: Math.random,
+      now: () => new Date(),
+      assignModel: null,
+    });
+    const room = await createRoom(phone(ids[0]), { nickname: "방장" });
+    if (!("ok" in room)) throw new Error(room.error);
+    for (const [i, id] of ids.slice(1).entries()) {
+      await joinRoom(phone(id), { code: room.code, nickname: `c${i}` });
+    }
+    const game = await startGame(phone(ids[0]), { roomId: room.roomId });
+    if (!("ok" in game)) throw new Error(game.error);
+    await db.from("games").update({ phase }).eq("id", game.gameId);
+    const { data: secret } = await db
+      .from("game_secrets")
+      .select("players!game_secrets_culprit_player_id_fkey(user_id)")
+      .eq("game_id", game.gameId)
+      .single<{ players: { user_id: string } }>();
+    const culprit = secret!.players.user_id;
+    return { ids, phone, roomId: room.roomId, gameId: game.gameId, culprit };
+  }
+
+  it("secret 에서 나가면 cancelled 로 저장되고 방은 lobby, stale 도 저장된다", async () => {
+    const g = await gameAt("secret");
+    expect(await leaveRoom(g.phone(g.culprit), { roomId: g.roomId })).toEqual({ ok: true });
+    const { data } = await db
+      .from("games")
+      .select("phase, ended_reason, ended_at, rooms(status)")
+      .eq("id", g.gameId)
+      .single<{
+        phase: string;
+        ended_reason: string;
+        ended_at: string;
+        rooms: { status: string };
+      }>();
+    expect(data).toMatchObject({
+      phase: "ended",
+      ended_reason: "cancelled",
+      rooms: { status: "lobby" },
+    });
+    expect(data!.ended_at).not.toBeNull();
+
+    const stale = await db.from("games").update({ ended_reason: "stale" }).eq("id", g.gameId);
+    expect(stale.error).toBeNull();
+  });
+
+  it("투표 중 나가면 표가 있어도 판정 전이라 해설에 카드 3, 9 재료가 없다 (#72 `제안`)", async () => {
+    const g = await gameAt("vote");
+    const voter = g.ids.find((id) => id !== g.culprit)!;
+    const { data: target } = await db
+      .from("players")
+      .select("id")
+      .eq("room_id", g.roomId)
+      .eq("user_id", g.culprit)
+      .single<{ id: string }>();
+    expect(await castVote(db, voter, g.gameId, target!.id)).toHaveProperty("ok");
+    await leaveRoom(g.phone(g.culprit), { roomId: g.roomId });
+
+    const r = await readReveal(db, voter, g.gameId);
+    if (!("ok" in r)) throw new Error(r.error);
+    expect(r.body.ending).toEqual({ outcome: "aired_off", text: "방송 중단", culpritLeft: true });
+    expect(r.body.votes).toEqual([]);
+    expect(r.body.solvers).toEqual([]);
+  });
+});

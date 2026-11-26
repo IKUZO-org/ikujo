@@ -374,3 +374,70 @@ describe("replay", () => {
     expect(store.games).toHaveLength(1);
   });
 });
+
+describe("범인 이탈 (D-025)", () => {
+  async function gameAt(count: number, phase: string) {
+    const host = await roomWith(count);
+    const r = await startGame(phone("u1"), { roomId: host.roomId });
+    if (!("ok" in r)) throw new Error(r.error);
+    const game = store.games.at(-1)!;
+    game.phase = phase;
+    const culprit = store.players.find((p) => p.id === game.game.secret.culpritPlayerId)!;
+    return { host, game, culprit: phone(culprit.userId) };
+  }
+
+  it.each(["intro", "secret"])(
+    "%s 에서 나가면 판 취소, 방은 대기실, 나간 사람 빼고 다시 시작",
+    async (phase) => {
+      const { host, game, culprit } = await gameAt(5, phase);
+      expect(await leaveRoom(culprit, { roomId: host.roomId })).toEqual({ ok: true });
+      expect(game).toMatchObject({ phase: "ended", end: { endedReason: "cancelled" } });
+      expect(store.rooms[0].status).toBe("lobby");
+      expect(store.events.at(-1)).toMatchObject({ name: "player_left", props: { phase } });
+
+      const lobby = await getRoomState(phone("u1"), { code: host.code });
+      if (!("ok" in lobby)) throw new Error(lobby.error);
+      expect(lobby.state.players).toHaveLength(4);
+      const host1 = store.players.find((p) => p.id === store.rooms[0].hostPlayerId)!;
+      expect(await startGame(phone(host1.userId), { roomId: host.roomId })).toMatchObject({
+        ok: true,
+      });
+      expect(store.games[1].game.assignments).toHaveLength(4);
+    },
+  );
+
+  it.each(["r1", "r2", "vote", "revote"])("%s 에서 나가면 바로 해설, 방송 중단", async (phase) => {
+    const { host, game, culprit } = await gameAt(4, phase);
+    await leaveRoom(culprit, { roomId: host.roomId });
+    expect(game).toMatchObject({
+      phase: "reveal",
+      end: { outcome: "aired_off", endedReason: "culprit_left" },
+    });
+    expect(signals.at(-2)?.signal).toEqual({ type: "phase", phase: "reveal", endsAt: null });
+  });
+
+  it("다시 들어와도 취소나 해설을 되돌리지 않는다", async () => {
+    const a = await gameAt(4, "r2");
+    await leaveRoom(a.culprit, { roomId: a.host.roomId });
+    await joinRoom(a.culprit, { code: a.host.code });
+    expect(a.game.phase).toBe("reveal");
+
+    store = memoryStore();
+    const b = await gameAt(4, "intro");
+    await leaveRoom(b.culprit, { roomId: b.host.roomId });
+    expect(await joinRoom(b.culprit, { code: b.host.code })).toMatchObject({ ok: true });
+    expect(b.game.phase).toBe("ended");
+    expect(store.rooms[0].status).toBe("lobby");
+    // 대기실에 다시 합류한다 (#72 `제안`)
+    const lobby = await getRoomState(phone("u1"), { code: b.host.code });
+    if (!("ok" in lobby)) throw new Error(lobby.error);
+    expect(lobby.state.players).toHaveLength(4);
+  });
+
+  it("해설에서 범인이 홈으로를 눌러도 판은 그대로", async () => {
+    const { host, game, culprit } = await gameAt(4, "reveal");
+    await leaveRoom(culprit, { roomId: host.roomId });
+    expect(game.phase).toBe("reveal");
+    expect(game.end).toBeUndefined();
+  });
+});
