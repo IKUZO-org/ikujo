@@ -69,7 +69,7 @@ export async function ghostPlayerIds(db: SupabaseClient, gameId: string): Promis
 /**
  * 투표할 사람 수와 투표한 수. 투표할 사람은 살아 있고(유령 아님, AC-053) 나가지 않은 사람 (BR-011).
  * 투표 중 다시 들어오면 left_at 이 비워져 다시 분모에 들어간다.
- * 나간 사람이 낸 표는 투표 수에서 빼서 분모와 같은 기준으로 센다 (판정은 tally 가 같은 기준, 005)
+ * 나간 사람이 낸 표는 투표 수에서 빼서 분모와 같은 기준으로 센다 (판정은 tally 가 같은 기준, 006)
  */
 export async function voteCounts(db: SupabaseClient, game: GameRow, phase: "vote" | "revote") {
   const [players, ghosts, votes] = await Promise.all([
@@ -239,7 +239,7 @@ type Judged = {
   fields: { revote_candidates?: string[]; outcome?: "caught" | "aired_off" };
 };
 
-// 투표를 tally 로 판정한다 (spec S-11). 안 찍은 사람은 기권 (BR-007). 나간 사람의 표는 tally 가 뺀다 (005)
+// 투표를 tally 로 판정한다 (spec S-11). 안 찍은 사람은 기권 (BR-007). 나간 사람의 표는 tally 가 뺀다 (006)
 // 결과(지목된 사람, 범인)는 games.outcome 과 revote_candidates 로만 남기고 응답이나 신호에 싣지 않는다 (BR-001)
 async function judge(db: SupabaseClient, game: GameRow, phase: "vote" | "revote"): Promise<Judged> {
   const [tally, counts] = await Promise.all([
