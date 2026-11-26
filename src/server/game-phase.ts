@@ -12,6 +12,7 @@ import {
   voteRound,
   type Phase,
 } from "./phase";
+import { createReveal } from "./game-reveal";
 import { broadcast } from "./realtime";
 
 export type PhaseResult =
@@ -224,6 +225,15 @@ export async function advancePhase(
     await logEvent(db, "vote_done", game, { round, votes: judged.votes, voters: judged.voters });
     if (to === "revote") {
       await logEvent(db, "revote", game, { candidates: judged.fields.revote_candidates?.length });
+    }
+  }
+
+  if (to === "reveal") {
+    // 해설 카드 1~7, 9 는 여기서 바로, 8 은 뒤에서 (#47). 실패해도 getReveal 이 다시 만든다
+    try {
+      await createReveal(db, gameId);
+    } catch (e) {
+      console.error("createReveal", e);
     }
   }
 

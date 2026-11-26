@@ -12,4 +12,6 @@ export type RoomSignal =
   | { type: "phase"; phase: string; endsAt: string | null }
   | { type: "count"; ready?: number; votes?: number }
   // 출몰 (FR-053). 유령의 말은 모두에게 보이는 공용 글이라 실어도 된다 (data §5)
-  | { type: "haunt"; body: string };
+  | { type: "haunt"; body: string }
+  // 맞춤 해설(S-12 카드 8)이 뒤늦게 채워짐. 글은 싣지 않고 getReveal 로 다시 읽는다
+  | { type: "reveal" };
