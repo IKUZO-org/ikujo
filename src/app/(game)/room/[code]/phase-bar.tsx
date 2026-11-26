@@ -1,7 +1,7 @@
 // 상단 고정 바 (spec §2 공통 틀, PRD §13, DESIGN.md §6 TopBar): 높이 52px + 위 안전 영역, 3칸.
 // 왼쪽: 설정(S-13) 아이콘과 사건 제목, 가운데: 지금 단계, 오른쪽: 남은 시간.
 // 사건 제목 자리는 spec/PRD(상단 바)와 DESIGN.md(등장인물 보기 안)가 다르다. docs 를 따라 상단 바에 둔다 (CLAUDE.md §2).
-// 등장인물 보기 아이콘은 아직 없다
+// 등장인물 보기 아이콘은 #73(설정) 범위 밖이라 두지 않았다
 import { Timer } from "@/components/game";
 import { SettingsButton } from "@/components/settings";
 
