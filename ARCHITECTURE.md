@@ -55,6 +55,12 @@ tests/                      단위, RLS(두 사용자 세션), 단계 진행
 - 표와 RLS는 [docs/data.md](docs/data.md) §2~3 그대로. 새 표, 새 열은 data 문서를 먼저 바꾸고(Hatch) 마이그레이션을 쓴다
 - 마이그레이션은 번호 순서로 추가만 한다. 머지된 마이그레이션 파일은 고치지 않는다
 - RLS 테스트는 두 사용자 세션으로 서로의 `assignments`, `votes`, `game_secrets` 를 읽어 0줄 (AC-030)
+- 정기 작업은 Supabase `pg_cron` 이 DB 함수를 부른다. 함수는 security definer 이고 앱 역할(anon, authenticated, service_role)에는 실행 권한을 주지 않는다. 외부에서 부르는 주소와 비밀 값이 없다
+- 원격 Supabase 에 `pg_cron` 확장이 켜져 있어야 한다
+
+| job | 언제 | 하는 일 |
+| --- | --- | --- |
+| `ikujo-cleanup` | 매일 18:00 UTC (한국 03:00) | `cleanup_stale_and_old()`: 24시간 활동 없는 방과 판을 끝내고, 30일 지난 방과 익명 사용자를 지운다 (data §6, `009_cleanup.sql`, #74) |
 
 ## 5. 테스트와 확인
 | 무엇 | 어떻게 |
