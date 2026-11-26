@@ -3,6 +3,7 @@
 // S-01 온보딩 (FR-002): 처음 연 사람에게 4장, 건너뛰기, 마지막 장에서 시작. 설정에서 다시 본다.
 // 값은 모두 이 폰에만 (src/lib/settings.ts)
 import { useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/Button";
 import { Sheet } from "@/components/game";
 import { hasSeenOnboarding, isOn, markOnboardingSeen, setOn, type Toggle } from "@/lib/settings";
@@ -19,10 +20,17 @@ export function SettingsButton() {
       >
         <GearIcon />
       </button>
-      {open === "settings" && (
-        <SettingsSheet onClose={() => setOpen(null)} onOnboarding={() => setOpen("onboarding")} />
-      )}
-      {open === "onboarding" && <Onboarding onDone={() => setOpen(null)} />}
+      {/* 상단 바(sticky z-10) 안에 그리면 z 값이 바 안에서만 먹어 개인 화면 테두리(z-20)가 위에 겹친다. body 에 그린다 */}
+      {open === "settings" &&
+        createPortal(
+          <SettingsSheet
+            onClose={() => setOpen(null)}
+            onOnboarding={() => setOpen("onboarding")}
+          />,
+          document.body,
+        )}
+      {open === "onboarding" &&
+        createPortal(<Onboarding onDone={() => setOpen(null)} />, document.body)}
     </>
   );
 }
