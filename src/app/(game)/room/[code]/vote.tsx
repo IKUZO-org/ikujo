@@ -60,9 +60,11 @@ export function Vote({
       bottom={
         <>
           <ErrorLine message={error} />
-          <p className="text-center text-(length:--text-sm) text-(--color-text-muted)">
-            {v.canVote && !v.voted ? "보내면 바꿀 수 없어요" : guide}
-          </p>
+          {!locked && (
+            <p className="text-center text-(length:--text-sm) text-(--color-text-muted)">
+              보내면 바꿀 수 없어요
+            </p>
+          )}
           <Button
             onClick={send}
             disabled={pending || locked || !picked}
