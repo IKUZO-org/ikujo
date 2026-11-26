@@ -110,25 +110,33 @@ export async function voteCounts(db: SupabaseClient, game: GameRow, phase: "vote
   return { total: voters.size, ready: voted };
 }
 
-// 지금 남아 있는 참가자 수와 이 단계에서 누른 사람 수. 투표 단계는 투표할 사람 수와 투표한 수
+// 이 단계에서 누를 사람 수와 누른 수. 누를 사람은 이 판에 배정이 있고 나가지 않은 산 사람 (BR-011).
+// 유령은 준비 버튼이 없어 빼고, 누른 수도 같은 기준으로 센다 (#53). 투표 단계는 voteCounts
 async function readyCounts(db: SupabaseClient, game: GameRow, phase: Phase) {
   if (isVotePhase(phase)) return voteCounts(db, game, phase);
-  const [players, readies, assigned] = await Promise.all([
+  const [players, ghosts, readies, assigned] = await Promise.all([
     db
       .from("players")
       .select("id")
       .eq("room_id", game.room_id)
       .is("left_at", null)
       .returns<{ id: string }[]>(),
+    ghostPlayerIds(db, game.id),
     db
       .from("readies")
-      .select("player_id", { count: "exact", head: true })
+      .select("player_id")
       .eq("game_id", game.id)
-      .eq("phase", phase),
+      .eq("phase", phase)
+      .returns<{ player_id: string }[]>(),
     assignedPlayerIds(db, game.id),
   ]);
-  const total = (players.data ?? []).filter((p) => assigned.includes(p.id)).length;
-  return { total, ready: readies.count ?? 0 };
+  const members = new Set(
+    (players.data ?? [])
+      .map((p) => p.id)
+      .filter((id) => assigned.includes(id) && !ghosts.includes(id)),
+  );
+  const ready = (readies.data ?? []).filter((r) => members.has(r.player_id)).length;
+  return { total: members.size, ready };
 }
 
 export async function advancePhase(
