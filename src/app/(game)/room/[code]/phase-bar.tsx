@@ -1,9 +1,11 @@
-// 상단 고정 바 (spec "공통 틀", PRD §13): 사건 제목, 지금 단계, 남은 시간.
-// 등장인물 보기, 설정은 각 화면 단계에서 붙인다
-import { formatRemaining } from "@/lib/room-clock";
+// 상단 고정 바 (spec §2 공통 틀, PRD §13, DESIGN.md §6 TopBar): 높이 52px + 위 안전 영역, 3칸.
+// 왼쪽: 사건 제목, 가운데: 지금 단계, 오른쪽: 남은 시간.
+// 사건 제목 자리는 spec/PRD(상단 바)와 DESIGN.md(등장인물 보기 안)가 다르다. docs 를 따라 상단 바에 둔다 (CLAUDE.md §2).
+// 등장인물 보기, 설정(S-13) 아이콘은 이 단계 범위 밖이라 아직 없다
+import { Timer } from "@/components/game";
 
 // 문구는 spec 예시 "라운드 2 · 토론 중" 을 따르고, 나머지는 spec 화면 이름(S-07~S-12)
-const LABELS: Record<string, string> = {
+export const PHASE_LABELS: Record<string, string> = {
   intro: "오프닝",
   secret: "인물 카드",
   r1: "라운드 1 · 토론 중",
@@ -25,17 +27,16 @@ export function PhaseBar({
   remainingMs: number | null;
 }) {
   return (
-    <header className="sticky top-0 z-10 flex min-h-11 items-center justify-between gap-(--space-2) bg-(--color-surface) px-(--space-4) pt-[env(safe-area-inset-top)] text-(--color-text)">
-      <div className="flex min-w-0 flex-col py-(--space-2)">
+    <header className="sticky top-0 z-10 shrink-0 bg-(--color-bg) pt-[env(safe-area-inset-top)] text-(--color-text)">
+      <div className="grid h-13 grid-cols-[1fr_auto_1fr] items-center gap-(--space-2) border-b border-(--color-border) px-(--space-4)">
         <span className="truncate text-(length:--text-sm) text-(--color-text-muted)">{title}</span>
-        <span className="text-(length:--text-md)">{phase ? (LABELS[phase] ?? "") : ""}</span>
+        <h1 className="text-center text-(length:--text-md) font-bold">
+          {phase ? (PHASE_LABELS[phase] ?? "") : ""}
+        </h1>
+        <span className="flex justify-end">
+          <Timer ms={remainingMs} label="남은 시간" />
+        </span>
       </div>
-      <span
-        aria-label={remainingMs === null ? undefined : "남은 시간"}
-        className="text-(length:--text-lg) tabular-nums"
-      >
-        {formatRemaining(remainingMs)}
-      </span>
     </header>
   );
 }

@@ -28,6 +28,15 @@ export type GameRow = {
   phaseEndsAt: string | null;
 };
 
+/** 내 배정 한 줄 (data §2 assignments). 본인 요청(getMine)에만 쓴다 */
+export type AssignmentRow = {
+  characterId: string;
+  secretId: string;
+  alibiId: string;
+  isCulprit: boolean;
+  clueIds: Partial<Record<"r1" | "r2" | "r3", string[]>>;
+};
+
 export type NewGame = {
   roomId: string;
   playerCount: number;
@@ -81,6 +90,14 @@ export interface RoomStore {
   /** games + game_secrets + assignments. 중간에 실패하면 만든 것을 지우고 던진다 */
   createGame(game: NewGame): Promise<GameRow>;
   latestGame(roomId: string): Promise<GameRow | null>;
+  /** 판과 그 판의 방 id */
+  getGame(gameId: string): Promise<(GameRow & { roomId: string }) | null>;
+  /** 이 판에서 공용으로 열린 단서 (data §2 revealed_clues) */
+  listRevealedClues(gameId: string): Promise<{ clueId: string; round: number }[]>;
+  /** 이 단계에서 준비/확인/다음을 누른 플레이어 id (data §2 readies) */
+  listReadyPlayerIds(gameId: string, phase: string): Promise<string[]>;
+  /** 한 사람의 배정. 본인 확인은 부르는 쪽(getMine)이 한다 */
+  getAssignment(gameId: string, playerId: string): Promise<AssignmentRow | null>;
 
   /** 기록 (spec §7). 개인 식별 정보는 넣지 않는다 (data §6) */
   logEvent(
