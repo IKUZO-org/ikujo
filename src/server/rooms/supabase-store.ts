@@ -273,6 +273,28 @@ export function supabaseRoomStore(db: Db): RoomStore {
       return (data ?? []).map((r) => r.player_id);
     },
 
+    async getVoteInfo(gameId, round) {
+      const [votes, game] = await Promise.all([
+        db
+          .from("votes")
+          .select("voter_player_id")
+          .eq("game_id", gameId)
+          .eq("round", round)
+          .returns<{ voter_player_id: string }[]>(),
+        db
+          .from("games")
+          .select("revote_candidates")
+          .eq("id", gameId)
+          .maybeSingle<{ revote_candidates: string[] | null }>(),
+      ]);
+      check(votes.error);
+      check(game.error);
+      return {
+        votedPlayerIds: (votes.data ?? []).map((v) => v.voter_player_id),
+        revoteCandidates: game.data?.revote_candidates ?? [],
+      };
+    },
+
     async getAssignment(gameId, playerId) {
       const { data, error } = await db
         .from("assignments")

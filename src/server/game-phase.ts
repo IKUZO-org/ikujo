@@ -3,7 +3,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import scenario from "../../scenarios/live-death.json";
-import { canAdvance, endsAtFor, roundOf, type Phase } from "./phase";
+import {
+  canAdvance,
+  decideTally,
+  endsAtFor,
+  isVotePhase,
+  roundOf,
+  voteRound,
+  type Phase,
+} from "./phase";
 import { broadcast } from "./realtime";
 
 export type PhaseResult =
@@ -21,12 +29,18 @@ export type PhaseResult =
 export type ReadyResult =
   { ok: true; ready: number; total: number; serverNow: string } | { error: string };
 
-type GameRow = { id: string; room_id: string; phase: Phase; phase_ends_at: string | null };
+export type GameRow = {
+  id: string;
+  room_id: string;
+  phase: Phase;
+  phase_ends_at: string | null;
+  revote_candidates: string[] | null;
+};
 
-async function loadGameForMember(db: SupabaseClient, gameId: string, userId: string) {
+export async function loadGameForMember(db: SupabaseClient, gameId: string, userId: string) {
   const { data: game } = await db
     .from("games")
-    .select("id, room_id, phase, phase_ends_at")
+    .select("id, room_id, phase, phase_ends_at, revote_candidates")
     .eq("id", gameId)
     .maybeSingle<GameRow>();
   if (!game) return null;
@@ -41,8 +55,48 @@ async function loadGameForMember(db: SupabaseClient, gameId: string, userId: str
   return { game, playerId: player.id };
 }
 
-// 지금 남아 있는 참가자 수와 이 단계에서 누른 사람 수
+/** 이 판의 유령(희생자) player id */
+export async function ghostPlayerIds(db: SupabaseClient, gameId: string): Promise<string[]> {
+  const { data } = await db
+    .from("assignments")
+    .select("player_id")
+    .eq("game_id", gameId)
+    .eq("is_ghost", true)
+    .returns<{ player_id: string }[]>();
+  return (data ?? []).map((r) => r.player_id);
+}
+
+/**
+ * 투표할 사람 수와 투표한 수. 투표할 사람은 살아 있고(유령 아님, AC-053) 나가지 않은 사람 (BR-011).
+ * 투표 중 다시 들어오면 left_at 이 비워져 다시 분모에 들어간다.
+ * 나간 사람이 낸 표는 투표 수에서 빼서 분모와 같은 기준으로 센다 (판정은 tally 가 같은 기준, 006)
+ */
+export async function voteCounts(db: SupabaseClient, game: GameRow, phase: "vote" | "revote") {
+  const [players, ghosts, votes] = await Promise.all([
+    db
+      .from("players")
+      .select("id")
+      .eq("room_id", game.room_id)
+      .is("left_at", null)
+      .returns<{ id: string }[]>(),
+    ghostPlayerIds(db, game.id),
+    db
+      .from("votes")
+      .select("voter_player_id")
+      .eq("game_id", game.id)
+      .eq("round", voteRound(phase))
+      .returns<{ voter_player_id: string }[]>(),
+  ]);
+  const voters = new Set(
+    (players.data ?? []).map((p) => p.id).filter((id) => !ghosts.includes(id)),
+  );
+  const voted = (votes.data ?? []).filter((v) => voters.has(v.voter_player_id)).length;
+  return { total: voters.size, ready: voted };
+}
+
+// 지금 남아 있는 참가자 수와 이 단계에서 누른 사람 수. 투표 단계는 투표할 사람 수와 투표한 수
 async function readyCounts(db: SupabaseClient, game: GameRow, phase: Phase) {
+  if (isVotePhase(phase)) return voteCounts(db, game, phase);
   const [players, readies] = await Promise.all([
     db
       .from("players")
@@ -90,12 +144,20 @@ export async function advancePhase(
     };
   }
 
-  const to = decision.to;
+  let to = decision.to;
+  const judged = isVotePhase(game.phase) ? await judge(db, game, game.phase) : null;
+  if (judged) to = judged.to;
   const endsAt = endsAtFor(to, now)?.toISOString() ?? null;
-  // where phase = from: 여러 폰이 동시에 불러도 한 번만 바뀐다 (spec §1.1)
+  // where phase = from: 여러 폰이 동시에 불러도 한 번만 바뀐다 (spec §1.1).
+  // 판정도 이 한 번의 update 에 같이 쓰므로, 마지막 두 표가 동시에 와도 판정은 한 번만 남는다
   const { data: updated, error } = await db
     .from("games")
-    .update({ phase: to, phase_started_at: serverNow, phase_ends_at: endsAt })
+    .update({
+      phase: to,
+      phase_started_at: serverNow,
+      phase_ends_at: endsAt,
+      ...(judged?.fields ?? {}),
+    })
     .eq("id", gameId)
     .eq("phase", from)
     .select("id");
@@ -156,8 +218,64 @@ export async function advancePhase(
     }
   }
 
+  if (judged) {
+    // 기록 (spec §7). 누가 누구를 찍었는지, 누가 지목됐는지는 넣지 않는다 (BR-001)
+    const round = voteRound(judged.from);
+    await logEvent(db, "vote_done", game, { round, votes: judged.votes, voters: judged.voters });
+    if (to === "revote") {
+      await logEvent(db, "revote", game, { candidates: judged.fields.revote_candidates?.length });
+    }
+  }
+
   await broadcast(db, game.room_id, { type: "phase", phase: to, endsAt });
   return { ok: true, advanced: true, phase: to, endsAt, serverNow };
+}
+
+type Judged = {
+  from: "vote" | "revote";
+  to: "revote" | "reveal";
+  votes: number;
+  voters: number;
+  fields: { revote_candidates?: string[]; outcome?: "caught" | "aired_off" };
+};
+
+// 투표를 tally 로 판정한다 (spec S-11). 안 찍은 사람은 기권 (BR-007). 나간 사람의 표는 tally 가 뺀다 (006)
+// 결과(지목된 사람, 범인)는 games.outcome 과 revote_candidates 로만 남기고 응답이나 신호에 싣지 않는다 (BR-001)
+async function judge(db: SupabaseClient, game: GameRow, phase: "vote" | "revote"): Promise<Judged> {
+  const [tally, counts] = await Promise.all([
+    db.rpc("tally", { p_game_id: game.id, p_round: voteRound(phase) }),
+    voteCounts(db, game, phase),
+  ]);
+  if (tally.error) throw tally.error;
+  const decision = decideTally(
+    phase,
+    ((tally.data ?? []) as { target_player_id: string }[]).map((r) => r.target_player_id),
+  );
+  const base = { from: phase, votes: counts.ready, voters: counts.total };
+  if (decision.to === "revote") {
+    return { ...base, to: "revote", fields: { revote_candidates: decision.candidates } };
+  }
+  // 지목된 사람이 범인이면 검거, 아니면(지목 없음 포함) 방송 중단 (FR-061, OQ-008)
+  let outcome: "caught" | "aired_off" = "aired_off";
+  if (decision.accused) {
+    const { data: secret } = await db
+      .from("game_secrets")
+      .select("culprit_player_id")
+      .eq("game_id", game.id)
+      .maybeSingle<{ culprit_player_id: string }>();
+    if (secret?.culprit_player_id === decision.accused) outcome = "caught";
+  }
+  return { ...base, to: "reveal", fields: { outcome } };
+}
+
+async function logEvent(
+  db: SupabaseClient,
+  name: string,
+  game: GameRow,
+  props: Record<string, unknown>,
+) {
+  // 기록이 실패해도 동작은 계속한다
+  await db.from("events").insert({ name, room_id: game.room_id, game_id: game.id, props });
 }
 
 export async function markReady(

@@ -129,6 +129,14 @@ export interface RoomStore {
   listRevealedClues(gameId: string): Promise<{ clueId: string; round: number }[]>;
   /** 이 단계에서 준비/확인/다음을 누른 플레이어 id (data §2 readies) */
   listReadyPlayerIds(gameId: string, phase: string): Promise<string[]>;
+  /**
+   * 투표 단계의 공용 정보 재료 (spec S-11). round 1 투표, 2 재투표.
+   * 누가 누구를 찍었는지는 돌려주지 않는다 (AC-060)
+   */
+  getVoteInfo(
+    gameId: string,
+    round: 1 | 2,
+  ): Promise<{ votedPlayerIds: string[]; revoteCandidates: string[] }>;
   /** 한 사람의 배정. 본인 확인은 부르는 쪽(getMine)이 한다 */
   getAssignment(gameId: string, playerId: string): Promise<AssignmentRow | null>;
 
