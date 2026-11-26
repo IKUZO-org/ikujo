@@ -356,6 +356,11 @@ export type VoteState = {
   /** 내가 투표할 수 있는지 (유령은 못 함, AC-053), 이미 했는지 */
   canVote: boolean;
   voted: boolean;
+  /**
+   * 투표한 뒤 나갔다가 판정 전에 돌아와 표를 바꿀 수 있으면 내가 고른 player id (D-022).
+   * 내 응답에만 싣는다. 바꿀 수 없으면 null
+   */
+  myChangeableTarget: string | null;
   /** 고를 수 있는 player id. revote 는 동점자만 (AC-060-2) */
   candidates: string[];
 };
@@ -464,12 +469,16 @@ async function voteState(
   players: PlayerRow[],
   ghostId: string | null,
 ): Promise<VoteState> {
-  const info = await deps.store.getVoteInfo(gameId, phase === "vote" ? 1 : 2);
+  const round = phase === "vote" ? 1 : 2;
+  const [info, myChangeableTarget] = await Promise.all([
+    deps.store.getVoteInfo(gameId, round),
+    deps.store.getChangeableVote(gameId, round, myPlayerId),
+  ]);
   // 유령은 GameState.ghost 와 같은 출처(store.getGhost) (AC-053)
   const ghosts = new Set(ghostId ? [ghostId] : []);
   const voters = new Set(players.filter((p) => !p.leftAt && !ghosts.has(p.id)).map((p) => p.id));
   const voted = new Set(info.votedPlayerIds);
-  // vote 후보: 유령이 아닌 참가자 전부, 나간 사람 포함 `제안` (#46). seat 순
+  // vote 후보: 유령이 아닌 참가자 전부, 나간 사람 포함 (D-021). seat 순
   const candidates =
     phase === "revote"
       ? info.revoteCandidates
@@ -482,6 +491,7 @@ async function voteState(
     total: voters.size,
     canVote: voters.has(myPlayerId),
     voted: voted.has(myPlayerId),
+    myChangeableTarget,
     candidates,
   };
 }

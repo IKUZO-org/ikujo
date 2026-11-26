@@ -1,5 +1,5 @@
 -- 006_tally_excludes_left: tally 가 게임 중 나간 사람(players.left_at)의 표를 세지 않게 한다
--- 나간 사람은 기권 (BR-011, AC-BR-011). 나가기 전에 이미 낸 표도 뺀다 `제안` (#46), PO 확인 중.
+-- 나간 사람은 기권 (BR-011, AC-BR-011). 나가기 전에 이미 낸 표도 뺀다 (D-022).
 -- 다시 들어오면 join_room 이 left_at 을 비우므로 그 사람의 표는 다시 센다.
 -- 시그니처, 권한(service role 만)은 003 과 같다.
 create or replace function public.tally(p_game_id uuid, p_round int)

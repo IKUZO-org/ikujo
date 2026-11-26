@@ -136,6 +136,9 @@ export function memoryStore(): MemoryStore {
         .filter((r) => r.gameId === gameId && r.phase === phase)
         .map((r) => r.playerId);
     },
+    async getChangeableVote() {
+      return null;
+    },
     async getVoteInfo() {
       return { votedPlayerIds: [], revoteCandidates: [] };
     },

@@ -1,7 +1,8 @@
 "use client";
 // S-11 투표, 재투표 (FR-060). 공용: 완료 n/N, 남은 시간(상단 바). 개인: 후보 하나 고르고 보내기.
 // 공용 정보(getRoomState)에는 완료 인원만 있고 누가 누구를 찍었는지는 없다 (AC-060).
-// 보내면 바꿀 수 없다 `제안` (S-11). 모두 투표하거나 시간이 끝나면 서버가 판정한다.
+// 보내면 바꿀 수 없다 (S-11). 투표한 뒤 나갔다가 판정 전에 돌아온 사람만 고른 칸이 보이고 바꿀 수 있다 (D-022).
+// 모두 투표하거나 시간이 끝나면 서버가 판정한다.
 // 인물 그래픽은 그래픽 규칙(#23) 전이라 자리만 두고 이름으로 보여 준다 (PRD §24)
 import { useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
@@ -23,7 +24,7 @@ export function Vote({
   top: ReactNode;
   reload: () => Promise<void>;
 }) {
-  const [picked, setPicked] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(v.myChangeableTarget);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const name = new Map(players.map((p) => [p.id, p.nickname]));
@@ -33,7 +34,8 @@ export function Vote({
     ...v.candidates.map((id) => ({ id, ghost: false })),
     ...(revote || !game.ghost ? [] : [{ id: game.ghost.playerId, ghost: true }]),
   ];
-  const locked = !v.canVote || v.voted;
+  const changing = v.myChangeableTarget !== null;
+  const locked = !v.canVote || (v.voted && !changing);
 
   function send() {
     if (!picked) return;
@@ -47,11 +49,13 @@ export function Vote({
 
   const guide = !v.canVote
     ? "유령은 투표하지 않아요"
-    : v.voted
-      ? "모두 투표하면 결과가 나와요"
-      : revote
-        ? "동점이에요. 동점인 사람 중 한 명을 다시 골라 주세요"
-        : "범인이라고 생각하는 사람을 골라 주세요";
+    : changing
+      ? "돌아왔어요. 원하면 다른 사람으로 바꿀 수 있어요"
+      : v.voted
+        ? "모두 투표하면 결과가 나와요"
+        : revote
+          ? "동점이에요. 동점인 사람 중 한 명을 다시 골라 주세요"
+          : "범인이라고 생각하는 사람을 골라 주세요";
 
   return (
     <GameScreen
@@ -62,15 +66,15 @@ export function Vote({
           <ErrorLine message={error} />
           {!locked && (
             <p className="text-center text-(length:--text-sm) text-(--color-text-muted)">
-              보내면 바꿀 수 없어요
+              {changing ? "바꾸지 않으면 고른 표가 그대로 들어가요" : "보내면 바꿀 수 없어요"}
             </p>
           )}
           <Button
             onClick={send}
-            disabled={pending || locked || !picked}
+            disabled={pending || locked || !picked || picked === v.myChangeableTarget}
             count={{ n: v.count, of: v.total }}
           >
-            {v.voted ? "투표 완료" : "투표"}
+            {changing ? "투표 바꾸기" : v.voted ? "투표 완료" : "투표"}
           </Button>
         </>
       }

@@ -295,6 +295,28 @@ export function supabaseRoomStore(db: Db): RoomStore {
       };
     },
 
+    async getChangeableVote(gameId, round, playerId) {
+      const [vote, me] = await Promise.all([
+        db
+          .from("votes")
+          .select("target_player_id, at")
+          .eq("game_id", gameId)
+          .eq("round", round)
+          .eq("voter_player_id", playerId)
+          .maybeSingle<{ target_player_id: string; at: string }>(),
+        db
+          .from("players")
+          .select("rejoined_at")
+          .eq("id", playerId)
+          .maybeSingle<{ rejoined_at: string | null }>(),
+      ]);
+      check(vote.error);
+      check(me.error);
+      const rejoinedAt = me.data?.rejoined_at;
+      if (!vote.data || !rejoinedAt) return null;
+      return new Date(vote.data.at) < new Date(rejoinedAt) ? vote.data.target_player_id : null;
+    },
+
     async listAssignedPlayerIds(gameId) {
       const { data, error } = await db
         .from("assignments")
