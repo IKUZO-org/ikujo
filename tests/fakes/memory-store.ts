@@ -161,6 +161,19 @@ export function memoryStore(): MemoryStore {
     async getGhostTrait(gameId) {
       return s.games.find((x) => x.id === gameId)?.game.secret.ghostTrait ?? null;
     },
+    async listAssignedPlayerIds(gameId) {
+      return (s.games.find((x) => x.id === gameId)?.game.assignments ?? []).map((a) => a.playerId);
+    },
+    async getCulpritCharacter(gameId) {
+      return s.games.find((x) => x.id === gameId)?.game.secret.culpritCharacter ?? null;
+    },
+    async updateGamePhase(gameId, from, to) {
+      const g = s.games.find((x) => x.id === gameId);
+      if (!g || g.phase !== from) return false;
+      g.phase = to;
+      g.phaseEndsAt = null;
+      return true;
+    },
     async listGhostActions(gameId) {
       return s.ghostActions
         .filter((a) => a.gameId === gameId)

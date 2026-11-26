@@ -18,7 +18,8 @@ import { CharacterCard } from "./character-card";
 import { Ghost } from "./ghost";
 import { GhostCovers } from "./ghost-covers";
 import { Opening } from "./opening";
-import { PHASE_LABELS, PhaseBar } from "./phase-bar";
+import { Reveal } from "./reveal";
+import { PhaseBar } from "./phase-bar";
 import { Round } from "./round";
 import { Vote } from "./vote";
 
@@ -42,6 +43,9 @@ export function RoomView({ title }: { title: string }) {
   );
 
   if (loadError) {
+    // 방장이 해설에서 홈으로(endRoom)를 누르면 방이 닫혀 다시 읽기가 "없는 방"이 된다.
+    // 오류 때도 state 는 마지막 것이 남아 있어서, 해설 중이었으면 끝 화면으로
+    if (game?.phase === "reveal") return <Ended />;
     return (
       <Screen
         bottom={
@@ -63,6 +67,18 @@ export function RoomView({ title }: { title: string }) {
 
   // S-06 배정 중: 방은 시작했는데 판이 아직 없다 (AI 배정 중, FR-020)
   if (!game) return <Assigning top={top} />;
+
+  // 다시 하기 전에 나갔다 돌아온 사람은 이번 판 배정이 없다 (D-023). 해설부터 다시 같이 본다
+  if (!game.inGame && game.phase !== "reveal") {
+    return (
+      <GameScreen top={top}>
+        <h2 className="text-(length:--text-xl) font-extrabold">이번 판이 진행 중이에요</h2>
+        <p className="text-(length:--text-md) text-(--color-text-muted)">
+          판이 끝나면 다음 판에 같이 할 수 있어요
+        </p>
+      </GameScreen>
+    );
+  }
 
   switch (game.phase) {
     case "intro":
@@ -112,19 +128,25 @@ export function RoomView({ title }: { title: string }) {
           reload={load}
         />
       ) : null;
+    case "reveal":
+      return <Reveal key={game.id} gameId={game.id} state={state} top={top} reload={load} />;
     default:
-      // 해설 화면(S-12)은 #47 에서 만든다. 그 전까지 reveal 은 자리만 둔다
-      return (
-        <GameScreen top={top}>
-          <h2 className="text-(length:--text-xl) font-extrabold">
-            {PHASE_LABELS[game.phase] ?? ""}
-          </h2>
-          <p className="text-(length:--text-md) text-(--color-text-muted)">
-            다음 화면을 준비하고 있어요
-          </p>
-        </GameScreen>
-      );
+      return <Ended />;
   }
+}
+
+function Ended() {
+  return (
+    <Screen
+      bottom={
+        <Link href="/" className="flex min-h-11 items-center justify-center">
+          홈으로
+        </Link>
+      }
+    >
+      <h2 className="text-center text-(length:--text-xl) font-extrabold">방송이 끝났어요</h2>
+    </Screen>
+  );
 }
 
 // S-06 배정 중 (FR-020, NFR-003) ------------------------------------------------------

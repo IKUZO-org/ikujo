@@ -295,6 +295,16 @@ export function supabaseRoomStore(db: Db): RoomStore {
       };
     },
 
+    async listAssignedPlayerIds(gameId) {
+      const { data, error } = await db
+        .from("assignments")
+        .select("player_id")
+        .eq("game_id", gameId)
+        .returns<{ player_id: string }[]>();
+      check(error);
+      return (data ?? []).map((r) => r.player_id);
+    },
+
     async getAssignment(gameId, playerId) {
       const { data, error } = await db
         .from("assignments")
@@ -341,6 +351,27 @@ export function supabaseRoomStore(db: Db): RoomStore {
         .maybeSingle<{ ghost_trait: string }>();
       check(error);
       return data?.ghost_trait ?? null;
+    },
+
+    async getCulpritCharacter(gameId) {
+      const { data, error } = await db
+        .from("game_secrets")
+        .select("culprit_character")
+        .eq("game_id", gameId)
+        .maybeSingle<{ culprit_character: string }>();
+      check(error);
+      return data?.culprit_character ?? null;
+    },
+
+    async updateGamePhase(gameId, from, to) {
+      const { data, error } = await db
+        .from("games")
+        .update({ phase: to, phase_started_at: new Date().toISOString(), phase_ends_at: null })
+        .eq("id", gameId)
+        .eq("phase", from)
+        .select("id");
+      check(error);
+      return (data ?? []).length > 0;
     },
 
     async listGhostActions(gameId) {

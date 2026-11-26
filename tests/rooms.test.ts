@@ -5,11 +5,13 @@ import { scenarioSchema } from "@/lib/scenario/schema";
 import { assignByRule } from "@/server/assign";
 import {
   createRoom,
+  endRoom,
   getRoomState,
   joinRoom,
   leaveRoom,
   MSG,
   nextHost,
+  replay,
   startGame,
   uniqueNickname,
   type Deps,
@@ -318,5 +320,57 @@ describe("uniqueNickname", () => {
   it("이름, 이름2, 이름3 순서", () => {
     expect(uniqueNickname("a", [])).toBe("a");
     expect(uniqueNickname("a", [{ nickname: "a" }, { nickname: "a2" }])).toBe("a3");
+  });
+});
+
+describe("replay", () => {
+  async function atReveal(count: number) {
+    const host = await roomWith(count);
+    const r = await startGame(phone("u1"), { roomId: host.roomId });
+    if (!("ok" in r)) throw new Error(r.error);
+    store.games.at(-1)!.phase = "reveal";
+    return host;
+  }
+
+  it("누른 순간 접속한 사람으로 새 판. 나간 사람은 돌아와도 이 판 인원에 안 섞인다 (D-023)", async () => {
+    const host = await atReveal(5);
+    await leaveRoom(phone("u5"), { roomId: host.roomId });
+    const r = await replay(phone("u1"), { roomId: host.roomId });
+    expect(r).toMatchObject({ ok: true });
+    expect(store.games.map((g) => g.phase)).toEqual(["ended", "intro"]);
+    expect(store.games[1].game.assignments).toHaveLength(4);
+
+    // 다시 들어오면 방에는 있지만 이 판 배정은 없다
+    await joinRoom(phone("u5"), { code: host.code });
+    const back = await getRoomState(phone("u5"), { code: host.code });
+    if (!("ok" in back)) throw new Error(back.error);
+    expect(back.state.game).toMatchObject({ inGame: false, ready: { total: 4 } });
+  });
+
+  it("두 번 눌러도 새 판은 하나, 방장이 아니면 막힌다", async () => {
+    const host = await atReveal(4);
+    expect(await replay(phone("u2"), { roomId: host.roomId })).toEqual({ error: MSG.hostOnly });
+    expect(await endRoom(phone("u2"), { roomId: host.roomId })).toEqual({ error: MSG.hostOnly });
+    const [a, b] = await Promise.all([
+      replay(phone("u1"), { roomId: host.roomId }),
+      replay(phone("u1"), { roomId: host.roomId }),
+    ]);
+    expect([a, b].filter((r) => "ok" in r)).toHaveLength(1);
+    expect(store.games).toHaveLength(2);
+  });
+
+  it("방장의 홈으로(endRoom)는 판과 방을 끝내고, 두 번 눌러도 한 번만", async () => {
+    const host = await atReveal(4);
+    expect(await endRoom(phone("u1"), { roomId: host.roomId })).toEqual({ ok: true });
+    expect(await endRoom(phone("u1"), { roomId: host.roomId })).toHaveProperty("error");
+    expect(store.games[0].phase).toBe("ended");
+    expect(store.rooms[0].status).toBe("ended");
+  });
+
+  it("접속한 사람이 4명 미만이면 막는다 (AC-070-2)", async () => {
+    const host = await atReveal(4);
+    await leaveRoom(phone("u4"), { roomId: host.roomId });
+    expect(await replay(phone("u1"), { roomId: host.roomId })).toEqual({ error: MSG.tooFew });
+    expect(store.games).toHaveLength(1);
   });
 });

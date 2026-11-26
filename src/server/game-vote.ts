@@ -4,6 +4,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   advancePhase,
+  assignedPlayerIds,
   ghostPlayerIds,
   loadGameForMember,
   voteCounts,
@@ -27,7 +28,7 @@ export async function voteCandidates(
   phase: "vote" | "revote",
 ): Promise<string[]> {
   if (phase === "revote") return game.revote_candidates ?? [];
-  const [players, ghosts] = await Promise.all([
+  const [players, ghosts, assigned] = await Promise.all([
     db
       .from("players")
       .select("id")
@@ -35,8 +36,12 @@ export async function voteCandidates(
       .order("seat")
       .returns<{ id: string }[]>(),
     ghostPlayerIds(db, game.id),
+    assignedPlayerIds(db, game.id),
   ]);
-  return (players.data ?? []).map((p) => p.id).filter((id) => !ghosts.includes(id));
+  // 이 판에 배정된 사람만 (다시 하기 전 판에 나간 사람은 빠진다, D-023)
+  return (players.data ?? [])
+    .map((p) => p.id)
+    .filter((id) => assigned.includes(id) && !ghosts.includes(id));
 }
 
 export async function castVote(
