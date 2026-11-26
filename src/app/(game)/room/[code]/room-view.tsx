@@ -15,19 +15,28 @@ import { leaveRoom } from "@/server/actions/leave-room";
 import { startGame } from "@/server/actions/start-game";
 import type { RoomState } from "@/server/rooms/core";
 import { CharacterCard } from "./character-card";
+import { Ghost } from "./ghost";
+import { GhostCovers } from "./ghost-covers";
 import { Opening } from "./opening";
 import { PHASE_LABELS, PhaseBar } from "./phase-bar";
 import { Round } from "./round";
 
 const MIN_PLAYERS = 4;
 const MAX_PLAYERS = 6;
+const WHISPER_POLL_MS = 10_000;
 
 export function RoomView({ title }: { title: string }) {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
   const { state, error: loadError, reload: load, remainingMs } = useRoomState(code);
   const game = state?.status === "lobby" ? null : (state?.game ?? null);
-  const mine = useMine(game && game.phase !== "intro" ? game.id : null, state);
+  // r2, r3 에는 유령의 속삭임이 신호 없이 오므로 주기적으로도 다시 읽는다 (ghost.ts whisper)
+  const whisperRounds = game?.phase === "r2" || game?.phase === "r3";
+  const mine = useMine(
+    game && game.phase !== "intro" ? game.id : null,
+    state,
+    whisperRounds ? WHISPER_POLL_MS : null,
+  );
 
   if (loadError) {
     return (
@@ -59,18 +68,35 @@ export function RoomView({ title }: { title: string }) {
       return <CharacterCard key={game.id} game={game} mine={mine} top={top} reload={load} />;
     case "r1":
     case "r2":
-    case "r3":
-      // TODO(단계 8): r2 부터 희생자 폰은 유령 모드(S-10)
-      return game.round ? (
-        <Round
-          // 라운드마다 새로 그린다: 탭, 가리기, 오류가 다음 라운드로 넘어가지 않게 (#44)
-          key={`${game.id}:${game.phase}`}
-          game={{ ...game, round: game.round }}
-          mine={mine}
-          top={top}
-          reload={load}
-        />
-      ) : null;
+    case "r3": {
+      if (!game.round) return null;
+      // r2 부터 희생자 폰은 유령 모드(S-10), 나머지는 라운드 + 속보 (FR-050, AC-050)
+      const isGhost = game.ghost?.playerId === state.me.playerId;
+      return (
+        <>
+          {isGhost ? (
+            <Ghost
+              key={game.id}
+              game={game}
+              players={state.players}
+              mine={mine}
+              top={top}
+              reload={load}
+            />
+          ) : (
+            <Round
+              // 라운드마다 새로 그린다: 탭, 가리기, 오류가 다음 라운드로 넘어가지 않게 (#44)
+              key={`${game.id}:${game.phase}`}
+              game={{ ...game, round: game.round }}
+              mine={mine}
+              top={top}
+              reload={load}
+            />
+          )}
+          <GhostCovers game={game} isGhost={isGhost} />
+        </>
+      );
+    }
     default:
       // 투표, 해설(S-11, S-12)은 단계 9
       return (

@@ -253,6 +253,13 @@ export type GameState = {
   ready: { count: number; total: number; mine: boolean };
   /** 지금까지 공용으로 열린 단서 (FR-041). 열린 순서 */
   publicClues: { id: string; round: number; text: string }[];
+  /**
+   * r2 부터: 유령이 된 희생자 (FR-050). 속보 "○○, 해변에서 쓰러진 채 발견" 에 인물 이름을 쓰고,
+   * 투표(단계 9)에서 고르는 사람과 대상에서 뺄 때 playerId 를 쓴다 (AC-053). r2 전에는 null
+   */
+  ghost: { playerId: string; name: string } | null;
+  /** 출몰 (FR-053). 판에 1번, 모든 참가자에게 보이는 유령의 말. 아직 안 썼으면 null */
+  haunt: { id: string; body: string } | null;
 };
 
 export function roundNumber(phase: string): 1 | 2 | 3 | null {
@@ -306,10 +313,17 @@ async function gameState(
   myPlayerId: string,
   players: PlayerRow[],
 ): Promise<GameState> {
-  const [revealed, readyIds] = await Promise.all([
+  const [revealed, readyIds, ghost, actions] = await Promise.all([
     deps.store.listRevealedClues(game.id),
     deps.store.listReadyPlayerIds(game.id, game.phase),
+    deps.store.getGhost(game.id),
+    deps.store.listGhostActions(game.id),
   ]);
+  // 속삭임은 공용에 넣지 않는다. 출몰만 (data §3 ghost_actions)
+  const haunt = actions.find((a) => a.kind === "haunt");
+  const ghostName = ghost
+    ? deps.scenario.characters.find((c) => c.id === ghost.characterId)?.name
+    : undefined;
   const n = roundNumber(game.phase);
   const r = n ? deps.scenario.rounds.find((x) => x.round === n) : undefined;
   const clueText = new Map(deps.scenario.clues.map((c) => [c.id, c]));
@@ -329,6 +343,8 @@ async function gameState(
       const c = clueText.get(clueId);
       return c && c.visibility === "public" ? [{ id: c.id, round, text: c.text }] : [];
     }),
+    ghost: ghost && ghostName ? { playerId: ghost.playerId, name: ghostName } : null,
+    haunt: haunt ? { id: haunt.id, body: haunt.body } : null,
   };
 }
 

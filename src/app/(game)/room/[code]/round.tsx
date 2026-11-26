@@ -8,8 +8,9 @@
 // 이벤트 알림(FR-044, S-14 덮는 화면)은 단계 8, 9 에서 붙인다
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
-import { Card, GameScreen, NewBadge, Tabs, usePrivateReveal } from "@/components/game";
+import { Card, Chip, GameScreen, NewBadge, Tabs, usePrivateReveal } from "@/components/game";
 import { ErrorLine } from "@/components/Screen";
+import { readItem, writeItem } from "@/lib/session-item";
 import { ready } from "@/server/actions/phase";
 import type { MineState } from "@/server/reads";
 import type { GameState } from "@/server/rooms/core";
@@ -37,7 +38,13 @@ export function Round({
   const [pending, startTransition] = useTransition();
   const reveal = usePrivateReveal();
   const myClues = mine?.clues ?? null;
-  const clues = useClueAlert(game.id, myClues, tab === "mine");
+  const whispers = mine?.whispers ?? [];
+  // 유령의 속삭임도 새 개인 것이라 같은 점 + 진동으로 알린다 (FR-052, NFR-006). id 가 단서와 겹치지 않게 w- 를 붙인다
+  const alertItems = myClues && [
+    ...myClues,
+    ...whispers.map((w) => ({ id: `w-${w.id}`, round: w.round, text: w.body })),
+  ];
+  const clues = useClueAlert(game.id, alertItems, tab === "mine");
   const n = game.round.n;
 
   function changeTab(next: Tab) {
@@ -93,7 +100,10 @@ export function Round({
       {tab === "public" ? (
         <PublicText game={game} />
       ) : showMine ? (
-        <MineText clues={myClues} round={n} />
+        <>
+          <MineText clues={myClues} round={n} />
+          <Whispers whispers={whispers} />
+        </>
       ) : (
         <h2 className="text-(length:--text-xl) font-extrabold">
           {myClues === null ? "단서를 불러오는 중" : "나에게만 온 단서"}
@@ -116,6 +126,21 @@ function PublicText({ game }: { game: RoundGame }) {
       </p>
       <ClueList now={now} before={before} empty="이번 라운드 공용 단서는 아직 없어요" />
     </>
+  );
+}
+
+// 유령에게 받은 속삭임 (FR-052, S-10). 나만 보기 화면 안에서만 보인다 (DESIGN.md §4)
+function Whispers({ whispers }: { whispers: { id: string; round: number; body: string }[] }) {
+  if (whispers.length === 0) return null;
+  return (
+    <section className="flex w-full flex-col items-center gap-(--space-2) pt-(--space-3)">
+      <Chip>유령의 속삭임</Chip>
+      <ul className="flex w-full flex-col gap-(--space-2)">
+        {whispers.map((w) => (
+          <Card key={w.id}>“{w.body}”</Card>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -208,21 +233,4 @@ function readSeen(key: string): Set<string> {
 
 function writeSeen(key: string, seen: Set<string>) {
   writeItem(key, JSON.stringify([...seen]));
-}
-
-// sessionStorage 는 편의용이다. 못 쓰는 브라우저(사생활 보호 모드 등)에서는 없는 것처럼 둔다
-function readItem(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeItem(key: string, value: string) {
-  try {
-    sessionStorage.setItem(key, value);
-  } catch {
-    // 저장 못 해도 이 화면에서는 state 로 기억한다
-  }
 }

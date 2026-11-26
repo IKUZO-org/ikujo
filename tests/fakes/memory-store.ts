@@ -2,6 +2,7 @@
 import {
   UniqueViolation,
   type GameRow,
+  type GhostActionRow,
   type NewGame,
   type PlayerRow,
   type RoomRow,
@@ -16,6 +17,9 @@ export type MemoryStore = RoomStore & {
   events: { name: string; props: Record<string, unknown> }[];
   revealed: { gameId: string; clueId: string; round: number }[];
   readies: { gameId: string; playerId: string; phase: string }[];
+  /** r2 진입 때 game-phase.ts 가 켜는 assignments.is_ghost. 테스트가 직접 넣는다 */
+  ghosts: { gameId: string; playerId: string }[];
+  ghostActions: (GhostActionRow & { gameId: string })[];
 };
 
 export function memoryStore(): MemoryStore {
@@ -29,6 +33,8 @@ export function memoryStore(): MemoryStore {
     events: [],
     revealed: [],
     readies: [],
+    ghosts: [],
+    ghostActions: [],
 
     async findActiveRoomByCode(code) {
       const r = s.rooms.find((x) => x.code === code && x.status !== "ended");
@@ -140,7 +146,40 @@ export function memoryStore(): MemoryStore {
         alibiId: a.alibiId,
         isCulprit: a.isCulprit,
         clueIds: a.clueIds,
+        isGhost: s.ghosts.some((x) => x.gameId === gameId && x.playerId === playerId),
       };
+    },
+    async getGhost(gameId) {
+      const ghost = s.ghosts.find((x) => x.gameId === gameId);
+      const g = s.games.find((x) => x.id === gameId);
+      const a = g?.game.assignments.find((x) => x.playerId === ghost?.playerId);
+      return ghost && a ? { playerId: ghost.playerId, characterId: a.characterId } : null;
+    },
+    async getGhostTrait(gameId) {
+      return s.games.find((x) => x.id === gameId)?.game.secret.ghostTrait ?? null;
+    },
+    async listGhostActions(gameId) {
+      return s.ghostActions
+        .filter((a) => a.gameId === gameId)
+        .map((a) => ({
+          id: a.id,
+          kind: a.kind,
+          fromPlayerId: a.fromPlayerId,
+          toPlayerId: a.toPlayerId,
+          round: a.round,
+          body: a.body,
+        }));
+    },
+    // 001_core.sql 출몰 1번, 005_ghost.sql 라운드당 속삭임 1번과 같은 제약
+    async insertGhostAction(a) {
+      const same = s.ghostActions.filter((x) => x.gameId === a.gameId && x.kind === a.kind);
+      if (a.kind === "haunt" && same.length > 0) throw new UniqueViolation("haunt");
+      if (
+        a.kind === "whisper" &&
+        same.some((x) => x.fromPlayerId === a.fromPlayerId && x.round === a.round)
+      )
+        throw new UniqueViolation("whisper");
+      s.ghostActions.push({ ...a, id: String(s.ghostActions.length + 1) });
     },
     async logEvent(name, props) {
       s.events.push({ name, props });
