@@ -1,11 +1,18 @@
 // 해설 (spec §4 getReveal, data §3 reveals). 로컬 Supabase 필요
 import { beforeAll, describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import liveDeath from "../../scenarios/live-death.json";
+import { scenarioSchema } from "@/lib/scenario/schema";
+import { voteCounts, type GameRow } from "@/server/game-phase";
 import { readReveal } from "@/server/game-reveal";
-import { castVote } from "@/server/game-vote";
+import { castVote, voteCandidates } from "@/server/game-vote";
+import { createRoom, joinRoom, leaveRoom, replay, startGame, type Deps } from "@/server/rooms/core";
+import { supabaseRoomStore } from "@/server/rooms/supabase-store";
 import { guest, insert, serviceClient } from "./local-supabase";
 
 type Row = Record<string, unknown> & { id: string };
+
+const scenario = scenarioSchema.parse(liveDeath);
 
 let db: SupabaseClient;
 let users: { client: SupabaseClient; userId: string }[];
@@ -77,5 +84,60 @@ describe("getReveal", () => {
     expect(r.personal).toBeNull(); // 로컬은 모델 없음 (OQ-003)
     const after = await users[0].client.from("reveals").select("game_id").eq("game_id", gameId);
     expect(after.data).toHaveLength(1);
+  });
+});
+
+describe("replay", () => {
+  it("지난 판 기록은 남고, 나갔다 돌아온 사람은 새 판 인원과 후보에 안 섞인다 (D-019, D-023)", async () => {
+    const ids = (await Promise.all([guest(), guest(), guest(), guest(), guest()])).map(
+      (u) => u.userId,
+    );
+    const phone = (userId: string): Deps => ({
+      store: supabaseRoomStore(db),
+      user: { id: userId, isGuest: true },
+      broadcast: async () => {},
+      scenario,
+      random: Math.random,
+      now: () => new Date(),
+      assignModel: null,
+    });
+    const room = await createRoom(phone(ids[0]), { nickname: "방장" });
+    if (!("ok" in room)) throw new Error(room.error);
+    for (const [i, id] of ids.slice(1).entries()) {
+      await joinRoom(phone(id), { code: room.code, nickname: `q${i}` });
+    }
+    const first = await startGame(phone(ids[0]), { roomId: room.roomId });
+    if (!("ok" in first)) throw new Error(first.error);
+    await db.from("games").update({ phase: "reveal" }).eq("id", first.gameId);
+    await leaveRoom(phone(ids[4]), { roomId: room.roomId });
+
+    const second = await replay(phone(ids[0]), { roomId: room.roomId });
+    if (!("ok" in second)) throw new Error(second.error);
+    // 지난 판 배정과 비밀은 그대로 (30일 보관, D-019)
+    const old = await db.from("assignments").select("player_id").eq("game_id", first.gameId);
+    expect(old.data).toHaveLength(5);
+    const oldSecret = await db.from("game_secrets").select("game_id").eq("game_id", first.gameId);
+    expect(oldSecret.data).toHaveLength(1);
+
+    // 나간 사람이 돌아와도 새 판에서는 빠진다
+    await joinRoom(phone(ids[4]), { code: room.code });
+    const { data: left } = await db
+      .from("players")
+      .select("id, left_at")
+      .eq("room_id", room.roomId)
+      .eq("user_id", ids[4])
+      .single<{ id: string; left_at: string | null }>();
+    expect(left!.left_at).toBeNull();
+    await db.from("games").update({ phase: "vote" }).eq("id", second.gameId);
+    const game = (
+      await db
+        .from("games")
+        .select("id, room_id, phase, phase_ends_at, revote_candidates")
+        .eq("id", second.gameId)
+        .single<GameRow>()
+    ).data!;
+    expect(await voteCandidates(db, game, "vote")).not.toContain(left!.id);
+    expect((await voteCounts(db, game, "vote")).total).toBeLessThanOrEqual(4);
+    expect(await castVote(db, ids[4], second.gameId, game.room_id)).toHaveProperty("error");
   });
 });

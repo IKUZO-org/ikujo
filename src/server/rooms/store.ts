@@ -137,6 +137,8 @@ export interface RoomStore {
     gameId: string,
     round: 1 | 2,
   ): Promise<{ votedPlayerIds: string[]; revoteCandidates: string[] }>;
+  /** 이 판에 배정된 player id. 그 판 참가자를 셀 때 쓴다 (다시 하기 전 판에 나간 사람은 없다, D-023) */
+  listAssignedPlayerIds(gameId: string): Promise<string[]>;
   /** 한 사람의 배정. 본인 확인은 부르는 쪽(getMine)이 한다 */
   getAssignment(gameId: string, playerId: string): Promise<AssignmentRow | null>;
 

@@ -295,6 +295,16 @@ export function supabaseRoomStore(db: Db): RoomStore {
       };
     },
 
+    async listAssignedPlayerIds(gameId) {
+      const { data, error } = await db
+        .from("assignments")
+        .select("player_id")
+        .eq("game_id", gameId)
+        .returns<{ player_id: string }[]>();
+      check(error);
+      return (data ?? []).map((r) => r.player_id);
+    },
+
     async getAssignment(gameId, playerId) {
       const { data, error } = await db
         .from("assignments")

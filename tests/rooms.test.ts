@@ -5,6 +5,7 @@ import { scenarioSchema } from "@/lib/scenario/schema";
 import { assignByRule } from "@/server/assign";
 import {
   createRoom,
+  endGame,
   getRoomState,
   joinRoom,
   leaveRoom,
@@ -331,16 +332,39 @@ describe("replay", () => {
     return host;
   }
 
-  it("누른 순간 접속한 사람으로 새 판, 나간 사람은 빠진다 (D-023)", async () => {
+  it("누른 순간 접속한 사람으로 새 판. 나간 사람은 돌아와도 이 판 인원에 안 섞인다 (D-023)", async () => {
     const host = await atReveal(5);
     await leaveRoom(phone("u5"), { roomId: host.roomId });
     const r = await replay(phone("u1"), { roomId: host.roomId });
     expect(r).toMatchObject({ ok: true });
-    expect(store.games).toHaveLength(2);
-    expect(store.games[0].phase).toBe("ended");
-    expect(store.games[1]).toMatchObject({ phase: "intro" });
+    expect(store.games.map((g) => g.phase)).toEqual(["ended", "intro"]);
     expect(store.games[1].game.assignments).toHaveLength(4);
-    expect(store.players.map((p) => p.userId)).not.toContain("u5");
+
+    // 다시 들어오면 방에는 있지만 이 판 배정은 없다
+    await joinRoom(phone("u5"), { code: host.code });
+    const back = await getRoomState(phone("u5"), { code: host.code });
+    if (!("ok" in back)) throw new Error(back.error);
+    expect(back.state.game).toMatchObject({ inGame: false, ready: { total: 4 } });
+  });
+
+  it("두 번 눌러도 새 판은 하나, 방장이 아니면 막힌다", async () => {
+    const host = await atReveal(4);
+    expect(await replay(phone("u2"), { roomId: host.roomId })).toEqual({ error: MSG.hostOnly });
+    expect(await endGame(phone("u2"), { roomId: host.roomId })).toEqual({ error: MSG.hostOnly });
+    const [a, b] = await Promise.all([
+      replay(phone("u1"), { roomId: host.roomId }),
+      replay(phone("u1"), { roomId: host.roomId }),
+    ]);
+    expect([a, b].filter((r) => "ok" in r)).toHaveLength(1);
+    expect(store.games).toHaveLength(2);
+  });
+
+  it("끝내기는 판과 방을 끝내고, 두 번 눌러도 한 번만", async () => {
+    const host = await atReveal(4);
+    expect(await endGame(phone("u1"), { roomId: host.roomId })).toEqual({ ok: true });
+    expect(await endGame(phone("u1"), { roomId: host.roomId })).toHaveProperty("error");
+    expect(store.games[0].phase).toBe("ended");
+    expect(store.rooms[0].status).toBe("ended");
   });
 
   it("접속한 사람이 4명 미만이면 막는다 (AC-070-2)", async () => {

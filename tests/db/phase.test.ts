@@ -23,6 +23,19 @@ async function newGame(phase: string, endsAt: string | null): Promise<string> {
     phase_ends_at: endsAt,
     assignment_source: "rule",
   });
+  // 그 판 참가자는 assignments 로 센다
+  await insert(
+    db,
+    "assignments",
+    players.map((x, i) => ({
+      game_id: game.id,
+      player_id: x.id,
+      character_id: ["fav", "villain", "athlete", "writer"][i],
+      secret_id: "s",
+      alibi_id: "a",
+      is_culprit: false,
+    })),
+  );
   return game.id;
 }
 

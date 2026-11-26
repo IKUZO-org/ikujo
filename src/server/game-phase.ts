@@ -38,6 +38,16 @@ export type GameRow = {
   revote_candidates: string[] | null;
 };
 
+/** 이 판에 배정된 player id (그 판 참가자). 다시 하기 전 판에 나간 사람은 들어 있지 않다 (D-023) */
+export async function assignedPlayerIds(db: SupabaseClient, gameId: string): Promise<string[]> {
+  const { data } = await db
+    .from("assignments")
+    .select("player_id")
+    .eq("game_id", gameId)
+    .returns<{ player_id: string }[]>();
+  return (data ?? []).map((r) => r.player_id);
+}
+
 export async function loadGameForMember(db: SupabaseClient, gameId: string, userId: string) {
   const { data: game } = await db
     .from("games")
@@ -53,6 +63,8 @@ export async function loadGameForMember(db: SupabaseClient, gameId: string, user
     .is("left_at", null)
     .maybeSingle<{ id: string }>();
   if (!player) return null;
+  // 이 판에 배정이 없으면(다시 하기 뒤에 돌아온 사람) 이 판의 동작은 못 한다
+  if (!(await assignedPlayerIds(db, gameId)).includes(player.id)) return null;
   return { game, playerId: player.id };
 }
 
@@ -73,7 +85,7 @@ export async function ghostPlayerIds(db: SupabaseClient, gameId: string): Promis
  * 나간 사람이 낸 표는 투표 수에서 빼서 분모와 같은 기준으로 센다 (판정은 tally 가 같은 기준, 006)
  */
 export async function voteCounts(db: SupabaseClient, game: GameRow, phase: "vote" | "revote") {
-  const [players, ghosts, votes] = await Promise.all([
+  const [players, ghosts, votes, assigned] = await Promise.all([
     db
       .from("players")
       .select("id")
@@ -87,9 +99,12 @@ export async function voteCounts(db: SupabaseClient, game: GameRow, phase: "vote
       .eq("game_id", game.id)
       .eq("round", voteRound(phase))
       .returns<{ voter_player_id: string }[]>(),
+    assignedPlayerIds(db, game.id),
   ]);
   const voters = new Set(
-    (players.data ?? []).map((p) => p.id).filter((id) => !ghosts.includes(id)),
+    (players.data ?? [])
+      .map((p) => p.id)
+      .filter((id) => assigned.includes(id) && !ghosts.includes(id)),
   );
   const voted = (votes.data ?? []).filter((v) => voters.has(v.voter_player_id)).length;
   return { total: voters.size, ready: voted };
@@ -98,19 +113,22 @@ export async function voteCounts(db: SupabaseClient, game: GameRow, phase: "vote
 // 지금 남아 있는 참가자 수와 이 단계에서 누른 사람 수. 투표 단계는 투표할 사람 수와 투표한 수
 async function readyCounts(db: SupabaseClient, game: GameRow, phase: Phase) {
   if (isVotePhase(phase)) return voteCounts(db, game, phase);
-  const [players, readies] = await Promise.all([
+  const [players, readies, assigned] = await Promise.all([
     db
       .from("players")
-      .select("id", { count: "exact", head: true })
+      .select("id")
       .eq("room_id", game.room_id)
-      .is("left_at", null),
+      .is("left_at", null)
+      .returns<{ id: string }[]>(),
     db
       .from("readies")
       .select("player_id", { count: "exact", head: true })
       .eq("game_id", game.id)
       .eq("phase", phase),
+    assignedPlayerIds(db, game.id),
   ]);
-  return { total: players.count ?? 0, ready: readies.count ?? 0 };
+  const total = (players.data ?? []).filter((p) => assigned.includes(p.id)).length;
+  return { total, ready: readies.count ?? 0 };
 }
 
 export async function advancePhase(
@@ -229,7 +247,7 @@ export async function advancePhase(
   }
 
   if (to === "reveal") {
-    // 해설 카드 1~7, 9 는 여기서 바로, 8 은 뒤에서 (#47). 실패해도 getReveal 이 다시 만든다
+    // 해설 카드 1~7, 9 는 여기서 바로, 8 은 뒤에서. 실패해도 getReveal 이 다시 만든다
     try {
       await createReveal(db, gameId);
     } catch (e) {

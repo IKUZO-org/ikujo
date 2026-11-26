@@ -44,7 +44,7 @@ export function RoomView({ title }: { title: string }) {
 
   if (loadError) {
     // 방장이 끝내기를 누르면 방이 닫혀 다시 읽기가 "없는 방"이 된다.
-    // 오류 때도 state 는 마지막 것이 남아 있어서, 해설 중이었으면 끝 화면으로 (#47)
+    // 오류 때도 state 는 마지막 것이 남아 있어서, 해설 중이었으면 끝 화면으로
     if (game?.phase === "reveal") return <Ended />;
     return (
       <Screen
@@ -67,6 +67,18 @@ export function RoomView({ title }: { title: string }) {
 
   // S-06 배정 중: 방은 시작했는데 판이 아직 없다 (AI 배정 중, FR-020)
   if (!game) return <Assigning top={top} />;
+
+  // 다시 하기 전에 나갔다 돌아온 사람은 이번 판 배정이 없다 (D-023). 해설부터 다시 같이 본다
+  if (!game.inGame && game.phase !== "reveal") {
+    return (
+      <GameScreen top={top}>
+        <h2 className="text-(length:--text-xl) font-extrabold">이번 판이 진행 중이에요</h2>
+        <p className="text-(length:--text-md) text-(--color-text-muted)">
+          판이 끝나면 다음 판에 같이 할 수 있어요
+        </p>
+      </GameScreen>
+    );
+  }
 
   switch (game.phase) {
     case "intro":
@@ -123,7 +135,6 @@ export function RoomView({ title }: { title: string }) {
   }
 }
 
-// 끝내기 뒤 (#47): 판과 방이 끝났다
 function Ended() {
   return (
     <Screen

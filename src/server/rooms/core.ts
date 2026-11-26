@@ -278,12 +278,11 @@ export async function replay(
   const staying = players.filter((p) => !p.leftAt);
   if (staying.length < MIN_PLAYERS) return fail(MSG.tooFew);
 
-  // 지난 판 범인은 나간 사람을 지우기 전에 읽는다 (지우면 game_secrets 가 같이 지워질 수 있다)
   const previousCulprit = await deps.store.getCulpritCharacter(game.id);
   // reveal → ended 를 먼저 바꿔 두 번 눌러도 새 판은 하나만
   if (!(await deps.store.updateGamePhase(game.id, "reveal", "ended"))) return fail(MSG.notReveal);
-  // 끝까지 안 돌아온 사람은 방에서 뺀다 (D-023). 남겨 두면 새 판의 투표 후보(D-021)와 준비 인원에 섞인다
-  for (const p of players.filter((x) => x.leftAt)) await deps.store.deletePlayer(p.id);
+  // 나간 사람은 방에 남겨 두고(지난 판 기록 보관, D-019) 새 판 배정만 받지 않는다.
+  // 그 판의 참가자는 assignments 로 센다 (assignedPlayerIds)
 
   try {
     const r = await beginGame(deps, room.id, staying, previousCulprit);
@@ -301,7 +300,7 @@ export async function replay(
 }
 
 /**
- * 끝내기 `제안` (#47): 방장만, reveal 에서. 판과 방을 끝낸다 (spec §1.1 "방장이 '끝내기'").
+ * 끝내기 `제안`: 방장만, reveal 에서. 판과 방을 끝낸다 (spec §1.1 "방장이 '끝내기'").
  * "홈으로"는 각자 leaveRoom 으로 방을 떠나는 것이라 판에는 영향이 없다
  */
 export async function endGame(deps: Deps, input: { roomId: string }): Promise<Result<object>> {
@@ -330,6 +329,8 @@ export type GameState = {
   id: string;
   phase: string;
   phaseEndsAt: string | null;
+  /** 내가 이 판에 배정을 받았는지. 다시 하기 전에 나갔다 돌아온 사람은 false: 이 판이 끝날 때까지 기다린다 */
+  inGame: boolean;
   /** 라운드(r1~r3)일 때만: 라운드 번호, 장소, 시점 (data §4 rounds) */
   round: { n: 1 | 2 | 3; place: string; time: string } | null;
   /** 이 단계에서 다음/확인/준비를 누른 인원 수와 남아 있는 인원 수, 내가 눌렀는지 */
@@ -409,12 +410,15 @@ async function gameState(
   myPlayerId: string,
   players: PlayerRow[],
 ): Promise<GameState> {
-  const [revealed, readyIds, ghost, actions] = await Promise.all([
+  const [revealed, readyIds, ghost, actions, assigned] = await Promise.all([
     deps.store.listRevealedClues(game.id),
     deps.store.listReadyPlayerIds(game.id, game.phase),
     deps.store.getGhost(game.id),
     deps.store.listGhostActions(game.id),
+    deps.store.listAssignedPlayerIds(game.id),
   ]);
+  // 이 판의 참가자 = 이 판에 배정이 있는 사람. 다시 하기 전에 나간 사람이 돌아와도 이 판에는 없다 (D-023)
+  const inGame = players.filter((p) => assigned.includes(p.id));
   // 속삭임은 공용에 넣지 않는다. 출몰만 (data §3 ghost_actions)
   const haunt = actions.find((a) => a.kind === "haunt");
   const ghostName = ghost
@@ -422,7 +426,7 @@ async function gameState(
     : undefined;
   const vote =
     game.phase === "vote" || game.phase === "revote"
-      ? await voteState(deps, game.id, game.phase, myPlayerId, players, ghost?.playerId ?? null)
+      ? await voteState(deps, game.id, game.phase, myPlayerId, inGame, ghost?.playerId ?? null)
       : null;
   const n = roundNumber(game.phase);
   const r = n ? deps.scenario.rounds.find((x) => x.round === n) : undefined;
@@ -432,10 +436,11 @@ async function gameState(
     phase: game.phase,
     phaseEndsAt: game.phaseEndsAt,
     round: n && r ? { n, place: r.place, time: r.time } : null,
-    // 인원은 game-phase.ts readyCounts 와 같은 기준: 누른 수 / 나가지 않은 참가자 수
+    inGame: assigned.includes(myPlayerId),
+    // 인원은 game-phase.ts readyCounts 와 같은 기준: 누른 수 / 이 판의 나가지 않은 참가자 수
     ready: {
       count: readyIds.length,
-      total: players.filter((p) => !p.leftAt).length,
+      total: inGame.filter((p) => !p.leftAt).length,
       mine: readyIds.includes(myPlayerId),
     },
     // 공용 단서만. revealed_clues 에는 공용 단서만 들어가지만, 한 번 더 걸러 개인 단서가 새지 않게 한다
