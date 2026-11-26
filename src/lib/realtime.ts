@@ -6,5 +6,8 @@ export const roomChannel = (roomId: string) => `room:${roomId}`;
 // 브로드캐스트 이벤트 이름. 종류는 payload.type 으로 나눈다
 export const SIGNAL_EVENT = "signal";
 
+// count 의 votes 는 투표 단계에서만 싣는다. 준비(markReady)에서는 생략 (data §5)
 export type RoomSignal =
-  { type: "players" } | { type: "phase"; phase: string; endsAt: string | null };
+  | { type: "players" }
+  | { type: "phase"; phase: string; endsAt: string | null }
+  | { type: "count"; ready: number; votes?: number };
