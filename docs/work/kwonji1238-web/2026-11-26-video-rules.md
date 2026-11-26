@@ -97,7 +97,7 @@
 - `npm run typecheck`, `npm run lint`, `npm test` → 안 돌림 (코드 변경 없음, 문서만. `node_modules` 도 설치되어 있지 않음)
 
 ### 남은 일
-- `scripts/usage/lib.mjs` 의 Windows 경로 비교 고치기 (슬래시와 역슬래시를 같게 맞춘 뒤 비교). 고치기 전까지 Windows에서 연 세션은 사용량이 0으로 나온다. 스크립트 담당에게 이슈로 넘김
+- `scripts/usage/lib.mjs` 의 Windows 경로 비교 고치기 (슬래시와 역슬래시를 같게 맞춘 뒤 비교). 고치기 전까지 Windows에서 연 세션은 사용량이 0으로 나온다. 스크립트 담당에게 넘길 이슈로 만들어야 하고, 아직 이슈를 만들지 않았다
 - 위 세션 1의 "남은 일" 중 이 PR에서 하지 않은 것은 그대로 남아 있다
 
 ## 사용량
