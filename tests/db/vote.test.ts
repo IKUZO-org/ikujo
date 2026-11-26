@@ -125,7 +125,8 @@ describe("castVote", () => {
       await leave(3, new Date().toISOString());
       expect(await cast(g, 3, 1)).toEqual({ error: "이 판의 참가자가 아니에요." });
       // p3 의 표가 빠져 p1 1표, p2 2표 → p2 지목 (빠지지 않으면 2:2 동점으로 재투표)
-      await cast(g, 1, 2);
+      // 분모에서도 빠진다: 남은 3명 중 p0 표만 남아 2/3
+      expect(await cast(g, 1, 2)).toEqual({ ok: true, votes: 2, total: 3 });
       await cast(g, 2, 2);
       expect(await gameRow(g)).toMatchObject({ phase: "reveal", outcome: "aired_off" });
     } finally {

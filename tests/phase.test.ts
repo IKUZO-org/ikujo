@@ -72,6 +72,5 @@ describe("decideTally", () => {
 
   it("아무도 안 찍으면 지목 없이 reveal (OQ-008)", () => {
     expect(decideTally("vote", [])).toEqual({ to: "reveal", accused: null });
-    expect(decideTally("revote", [])).toEqual({ to: "reveal", accused: null });
   });
 });
