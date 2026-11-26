@@ -3,7 +3,7 @@
 // 공용 탭: 라운드 n/3, 장소와 시점, 이번 공용 단서, 지금까지 공용 단서, 준비 완료 n/N (getRoomState).
 // 내 것 탭: 나에게만 온 단서 (getMine). 개인 화면 표시 + 가리기 (DESIGN.md §4).
 // 새로 고쳐도 고른 탭은 그대로, 개인 내용은 다시 가린다 (#44).
-// 새 개인 단서가 오면 내 것 탭에 점 + navigator.vibrate (NFR-006). 진동만으로 알리지 않는다 (DESIGN.md §7).
+// 새 개인 단서가 오면 내 것 탭에 점 + 진동 (NFR-006, 설정 S-13 에서 끄면 점만). 진동만으로 알리지 않는다 (DESIGN.md §7).
 // 준비 완료는 현황에만 반영하고, 다음 라운드는 타이머로만 넘어간다 (OQ-007 임시 결정, spec §9).
 // 이벤트 알림(FR-044, S-14 덮는 화면)은 단계 8, 9 에서 붙인다
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
@@ -11,6 +11,7 @@ import { Button } from "@/components/Button";
 import { Card, Chip, GameScreen, NewBadge, Tabs, usePrivateReveal } from "@/components/game";
 import { ErrorLine } from "@/components/Screen";
 import { readItem, writeItem } from "@/lib/session-item";
+import { vibrate } from "@/lib/settings";
 import { ready } from "@/server/actions/phase";
 import type { MineState } from "@/server/reads";
 import type { GameState } from "@/server/rooms/core";
@@ -205,11 +206,7 @@ function useClueAlert(gameId: string, clues: Clue[] | null, viewing: boolean) {
     const ids = freshKey.split(",").filter((id) => !buzzed.current.has(id));
     if (ids.length === 0) return;
     for (const id of ids) buzzed.current.add(id);
-    try {
-      navigator.vibrate?.(200);
-    } catch {
-      // 진동을 못 하는 기기 (iOS Safari 등): 점과 글로만 알린다
-    }
+    vibrate(200);
   }, [freshKey, viewing]);
 
   function markSeen() {
