@@ -253,6 +253,21 @@ export type GameState = {
   ready: { count: number; total: number; mine: boolean };
   /** 지금까지 공용으로 열린 단서 (FR-041). 열린 순서 */
   publicClues: { id: string; round: number; text: string }[];
+  /** vote, revote 일 때만 (spec S-11). 공용에는 완료 인원만, 누가 누구를 찍었는지는 없다 (AC-060) */
+  vote: VoteState | null;
+};
+
+export type VoteState = {
+  /** 투표한 수 / 투표할 사람 수 (살아 있고 나가지 않은 사람, BR-011) */
+  count: number;
+  total: number;
+  /** 내가 투표할 수 있는지 (유령은 못 함, AC-053), 이미 했는지 */
+  canVote: boolean;
+  voted: boolean;
+  /** 고를 수 있는 player id. revote 는 동점자만 (AC-060-2) */
+  candidates: string[];
+  /** 칸에 흐리게 보여 줄 유령 player id (DESIGN.md §6 투표 칸) */
+  ghosts: string[];
 };
 
 export function roundNumber(phase: string): 1 | 2 | 3 | null {
@@ -310,6 +325,10 @@ async function gameState(
     deps.store.listRevealedClues(game.id),
     deps.store.listReadyPlayerIds(game.id, game.phase),
   ]);
+  const vote =
+    game.phase === "vote" || game.phase === "revote"
+      ? await voteState(deps, game.id, game.phase, myPlayerId, players)
+      : null;
   const n = roundNumber(game.phase);
   const r = n ? deps.scenario.rounds.find((x) => x.round === n) : undefined;
   const clueText = new Map(deps.scenario.clues.map((c) => [c.id, c]));
@@ -329,6 +348,37 @@ async function gameState(
       const c = clueText.get(clueId);
       return c && c.visibility === "public" ? [{ id: c.id, round, text: c.text }] : [];
     }),
+    vote,
+  };
+}
+
+// 기준은 game-phase.ts voteCounts, game-vote.ts voteCandidates 와 같다
+async function voteState(
+  deps: Deps,
+  gameId: string,
+  phase: "vote" | "revote",
+  myPlayerId: string,
+  players: PlayerRow[],
+): Promise<VoteState> {
+  const info = await deps.store.getVoteInfo(gameId, phase === "vote" ? 1 : 2);
+  const ghosts = new Set(info.ghostPlayerIds);
+  const voters = new Set(players.filter((p) => !p.leftAt && !ghosts.has(p.id)).map((p) => p.id));
+  const voted = new Set(info.votedPlayerIds);
+  // vote 후보: 유령이 아닌 참가자 전부, 나간 사람 포함 `제안` (#46). seat 순
+  const candidates =
+    phase === "revote"
+      ? info.revoteCandidates
+      : [...players]
+          .sort((a, b) => a.seat - b.seat)
+          .filter((p) => !ghosts.has(p.id))
+          .map((p) => p.id);
+  return {
+    count: [...voted].filter((id) => voters.has(id)).length,
+    total: voters.size,
+    canVote: voters.has(myPlayerId),
+    voted: voted.has(myPlayerId),
+    candidates,
+    ghosts: [...ghosts],
   };
 }
 

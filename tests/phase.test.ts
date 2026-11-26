@@ -1,6 +1,6 @@
 // 단계 규칙 (spec §1.1, OQ-007)
 import { describe, expect, it } from "vitest";
-import { canAdvance, endsAtFor, nextPhase, type Phase } from "@/server/phase";
+import { canAdvance, decideTally, endsAtFor, type Phase } from "@/server/phase";
 
 const start = new Date("2026-01-01T00:00:00Z");
 const at = (ms: number) => new Date(start.getTime() + ms);
@@ -48,8 +48,30 @@ describe("canAdvance", () => {
     expect(d).toEqual({ ok: false, reason: "stale" });
   });
 
-  it("vote 다음은 단계 9 판정 전까지 넘기지 않는다", () => {
-    expect(nextPhase("vote")).toBeNull();
-    expect(decide("vote", 3 * 60_000)).toEqual({ ok: false, reason: "no_next" });
+  it("vote 는 모두 투표하거나 시간이 끝나면 판정으로 넘어간다", () => {
+    expect(decide("vote", 1000, 3, 4)).toEqual({ ok: false, reason: "too_early" });
+    expect(decide("vote", 1000, 4, 4)).toEqual({ ok: true, to: "reveal" });
+    expect(decide("vote", 3 * 60_000, 0, 4)).toEqual({ ok: true, to: "reveal" });
+  });
+});
+
+// 판정 (spec S-11, §8)
+describe("decideTally", () => {
+  it("단독 최다면 그 사람을 지목하고 reveal", () => {
+    expect(decideTally("vote", ["a"])).toEqual({ to: "reveal", accused: "a" });
+    expect(decideTally("revote", ["b"])).toEqual({ to: "reveal", accused: "b" });
+  });
+
+  it("2인 동점이면 그 2명만 후보로 revote (AC-060-2)", () => {
+    expect(decideTally("vote", ["a", "b"])).toEqual({ to: "revote", candidates: ["a", "b"] });
+  });
+
+  it("재투표도 동점이면 지목 없이 reveal (OQ-008)", () => {
+    expect(decideTally("revote", ["a", "b"])).toEqual({ to: "reveal", accused: null });
+  });
+
+  it("아무도 안 찍으면 지목 없이 reveal (OQ-008)", () => {
+    expect(decideTally("vote", [])).toEqual({ to: "reveal", accused: null });
+    expect(decideTally("revote", [])).toEqual({ to: "reveal", accused: null });
   });
 });
