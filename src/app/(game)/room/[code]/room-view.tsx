@@ -86,7 +86,7 @@ export function RoomView({ title }: { title: string }) {
         />
       ) : null;
     default:
-      // 해설(S-12)은 #47
+      // 해설 화면(S-12)은 #47 에서 만든다. 그 전까지 reveal 은 자리만 둔다
       return (
         <GameScreen top={top}>
           <h2 className="text-(length:--text-xl) font-extrabold">
