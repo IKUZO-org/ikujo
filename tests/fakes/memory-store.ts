@@ -13,6 +13,8 @@ export type MemoryStore = RoomStore & {
   players: PlayerRow[];
   games: (GameRow & { roomId: string; game: NewGame })[];
   events: { name: string; props: Record<string, unknown> }[];
+  revealed: { gameId: string; clueId: string; round: number }[];
+  readies: { gameId: string; playerId: string; phase: string }[];
   /** 다음 insertPlayer 직전에 끼어드는 일 (동시 입장 흉내) */
   beforeInsertPlayer?: () => void;
 };
@@ -26,6 +28,8 @@ export function memoryStore(): MemoryStore {
     players: [],
     games: [],
     events: [],
+    revealed: [],
+    readies: [],
 
     async findActiveRoomByCode(code) {
       const r = s.rooms.find((x) => x.code === code && x.status !== "ended");
@@ -91,6 +95,32 @@ export function memoryStore(): MemoryStore {
     async latestGame(roomId) {
       const g = s.games.filter((x) => x.roomId === roomId).at(-1);
       return g ? { id: g.id, phase: g.phase, phaseEndsAt: g.phaseEndsAt } : null;
+    },
+    async getGame(gameId) {
+      const g = s.games.find((x) => x.id === gameId);
+      return g ? { id: g.id, phase: g.phase, phaseEndsAt: g.phaseEndsAt, roomId: g.roomId } : null;
+    },
+    async listRevealedClues(gameId) {
+      return s.revealed
+        .filter((c) => c.gameId === gameId)
+        .map((c) => ({ clueId: c.clueId, round: c.round }));
+    },
+    async listReadyPlayerIds(gameId, phase) {
+      return s.readies
+        .filter((r) => r.gameId === gameId && r.phase === phase)
+        .map((r) => r.playerId);
+    },
+    async getAssignment(gameId, playerId) {
+      const g = s.games.find((x) => x.id === gameId);
+      const a = g?.game.assignments.find((x) => x.playerId === playerId);
+      if (!a) return null;
+      return {
+        characterId: a.characterId,
+        secretId: a.secretId,
+        alibiId: a.alibiId,
+        isCulprit: a.isCulprit,
+        clueIds: a.clueIds,
+      };
     },
     async logEvent(name, props) {
       s.events.push({ name, props });

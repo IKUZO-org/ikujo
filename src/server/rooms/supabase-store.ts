@@ -3,6 +3,7 @@ import "server-only";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import {
   UniqueViolation,
+  type AssignmentRow,
   type GameRow,
   type NewGame,
   type PlayerRow,
@@ -216,6 +217,62 @@ export function supabaseRoomStore(db: Db): RoomStore {
         .maybeSingle<GameDb>();
       check(error);
       return data ? toGame(data) : null;
+    },
+
+    async getGame(gameId) {
+      const { data, error } = await db
+        .from("games")
+        .select(`${GAME_COLS}, room_id`)
+        .eq("id", gameId)
+        .maybeSingle<GameDb & { room_id: string }>();
+      check(error);
+      return data ? { ...toGame(data), roomId: data.room_id } : null;
+    },
+
+    async listRevealedClues(gameId) {
+      const { data, error } = await db
+        .from("revealed_clues")
+        .select("clue_id, round")
+        .eq("game_id", gameId)
+        .order("revealed_at")
+        .returns<{ clue_id: string; round: number }[]>();
+      check(error);
+      return (data ?? []).map((c) => ({ clueId: c.clue_id, round: c.round }));
+    },
+
+    async listReadyPlayerIds(gameId, phase) {
+      const { data, error } = await db
+        .from("readies")
+        .select("player_id")
+        .eq("game_id", gameId)
+        .eq("phase", phase)
+        .returns<{ player_id: string }[]>();
+      check(error);
+      return (data ?? []).map((r) => r.player_id);
+    },
+
+    async getAssignment(gameId, playerId) {
+      const { data, error } = await db
+        .from("assignments")
+        .select("character_id, secret_id, alibi_id, is_culprit, clue_ids")
+        .eq("game_id", gameId)
+        .eq("player_id", playerId)
+        .maybeSingle<{
+          character_id: string;
+          secret_id: string;
+          alibi_id: string;
+          is_culprit: boolean;
+          clue_ids: AssignmentRow["clueIds"] | null;
+        }>();
+      check(error);
+      if (!data) return null;
+      return {
+        characterId: data.character_id,
+        secretId: data.secret_id,
+        alibiId: data.alibi_id,
+        isCulprit: data.is_culprit,
+        clueIds: data.clue_ids ?? {},
+      };
     },
 
     async logEvent(name, { roomId, gameId, ...props }) {
