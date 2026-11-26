@@ -4,6 +4,7 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import {
   UniqueViolation,
   type GameRow,
+  type JoinResult,
   type NewGame,
   type PlayerRow,
   type RoomRow,
@@ -154,6 +155,25 @@ export function supabaseRoomStore(db: Db): RoomStore {
     async setPlayerLeftAt(playerId, leftAt) {
       const { error } = await db.from("players").update({ left_at: leftAt }).eq("id", playerId);
       check(error);
+    },
+
+    async joinRoom({ code, userId, isGuest, nickname }) {
+      const { data, error } = await db
+        .rpc("join_room", {
+          p_code: code,
+          p_user_id: userId,
+          p_is_guest: isGuest,
+          p_nickname: nickname,
+        })
+        .single<{
+          result: JoinResult["result"];
+          room_id: string | null;
+          room_code: string | null;
+        }>();
+      check(error);
+      const row = data!;
+      if (row.result === "not_found") return { result: "not_found" };
+      return { result: row.result, roomId: row.room_id!, code: row.room_code! };
     },
 
     async createGame(game: NewGame) {

@@ -1,7 +1,7 @@
 // 방 동작이 DB에 바라는 것. 실제는 supabase-store.ts (service role), 테스트는 가짜 저장소.
 // 동시에 눌러도 깨지지 않게 하는 마지막 방어선은 DB 제약이다 (001_core.sql):
 //   진행 중 방 코드 unique, (room_id, seat) unique, (room_id, user_id) unique, seat 1~6.
-// 제약에 걸리면 UniqueViolation 을 던지고, 동작 쪽에서 다시 시도한다.
+// 제약에 걸리면 UniqueViolation 을 던진다. 입장은 DB 함수 join_room 이 방 줄을 잠가 차례로 한다.
 
 export type RoomStatus = "lobby" | "playing" | "ended";
 
@@ -61,6 +61,14 @@ export class UniqueViolation extends Error {
   }
 }
 
+export type JoinResult =
+  | { result: "not_found" }
+  | {
+      result: "member" | "rejoined" | "need_nickname" | "joined" | "started" | "full";
+      roomId: string;
+      code: string;
+    };
+
 export interface RoomStore {
   /** status 가 ended 가 아닌 방 중 이 코드 */
   findActiveRoomByCode(code: string): Promise<RoomRow | null>;
@@ -77,6 +85,17 @@ export interface RoomStore {
   insertPlayer(p: Omit<PlayerRow, "id" | "leftAt">): Promise<PlayerRow>;
   deletePlayer(playerId: string): Promise<void>;
   setPlayerLeftAt(playerId: string, leftAt: string | null): Promise<void>;
+
+  /**
+   * 코드로 방에 들어가기 (DB 함수 join_room, 004_join_room.sql). 방 줄을 잠그고 한 번에 한다.
+   * nickname 이 null 이면 들어갈 수 있는지만 본다.
+   */
+  joinRoom(p: {
+    code: string;
+    userId: string;
+    isGuest: boolean;
+    nickname: string | null;
+  }): Promise<JoinResult>;
 
   /** games + game_secrets + assignments. 중간에 실패하면 만든 것을 지우고 던진다 */
   createGame(game: NewGame): Promise<GameRow>;

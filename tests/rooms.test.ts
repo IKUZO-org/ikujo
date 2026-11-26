@@ -153,43 +153,6 @@ describe("joinRoom", () => {
     expect(store.players.find((p) => p.userId === "new")!.seat).toBe(2);
   });
 
-  it("동시에 들어와 seat 가 겹치면 다음 자리로 다시 시도", async () => {
-    const host = await roomWith(2);
-    // 내가 seat 3 에 넣기 직전에 다른 폰이 seat 3 을 가져간다
-    store.beforeInsertPlayer = () => {
-      store.players.push({
-        id: "other",
-        roomId: host.roomId,
-        userId: "other",
-        isGuest: true,
-        nickname: "x",
-        seat: 3,
-        leftAt: null,
-      });
-    };
-    const r = await joinRoom(phone("me"), { code: host.code, nickname: "나" });
-    expect(r).toMatchObject({ ok: true });
-    expect(store.players.find((p) => p.userId === "me")!.seat).toBe(4);
-  });
-
-  it("동시에 들어와 마지막 자리를 뺏기면 꽉 참", async () => {
-    const host = await roomWith(5);
-    store.beforeInsertPlayer = () => {
-      store.players.push({
-        id: "other",
-        roomId: host.roomId,
-        userId: "other",
-        isGuest: true,
-        nickname: "x",
-        seat: 6,
-        leftAt: null,
-      });
-    };
-    expect(await joinRoom(phone("me"), { code: host.code, nickname: "나" })).toEqual({
-      error: MSG.full,
-    });
-  });
-
   it("코드 형식이 틀리면 한 줄 안내", async () => {
     expect(await joinRoom(phone("x"), { code: "12ab" })).toEqual({
       error: "방 코드는 숫자 6자리예요",

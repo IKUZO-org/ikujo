@@ -88,55 +88,36 @@ export async function joinRoom(
   if (!code.success) return fail(code.error.issues[0].message);
   const { store, user } = deps;
 
-  const room = await store.findActiveRoomByCode(code.data);
-  if (!room) return fail(MSG.notFound);
-
-  const players = await store.listPlayers(room.id);
-  const me = players.find((p) => p.userId === user.id);
-  // 내가 이미 들어간 방: 오류 없이 그 방으로 (S-02, NFR-002). 게임 중 나갔다 오면 이어서 (spec §6)
-  if (me) {
-    if (me.leftAt) {
-      await store.setPlayerLeftAt(me.id, null);
-      await deps.broadcast(room.id, { type: "players" });
-    }
-    return { ok: true, code: room.code, roomId: room.id };
+  // 닉네임이 틀려도 먼저 들어갈 수 있는지부터 본다 (없는 방, 시작, 꽉 참 안내가 먼저)
+  const nickname = input.nickname === undefined ? null : nicknameSchema.safeParse(input.nickname);
+  // 방 잠금, lobby 확인, 이미 참가자, 빈 자리, 닉네임 숫자 붙이기, 넣기를 DB 함수가 한 번에 (#36)
+  const r = await store.joinRoom({
+    code: code.data,
+    userId: user.id,
+    isGuest: user.isGuest,
+    nickname: nickname?.success ? nickname.data : null,
+  });
+  switch (r.result) {
+    case "not_found":
+      return fail(MSG.notFound);
+    case "started":
+      return fail(MSG.started);
+    case "full":
+      return fail(MSG.full);
+    case "member":
+      return { ok: true, code: r.code, roomId: r.roomId };
+    case "rejoined":
+      // 게임 중 나갔다 오면 이어서 (spec §6)
+      await deps.broadcast(r.roomId, { type: "players" });
+      return { ok: true, code: r.code, roomId: r.roomId };
+    case "need_nickname":
+      if (nickname && !nickname.success) return fail(nickname.error.issues[0].message);
+      return { ok: true, code: r.code, roomId: r.roomId, needNickname: true };
+    case "joined":
+      await store.logEvent("room_joined", { roomId: r.roomId, guest: user.isGuest });
+      await deps.broadcast(r.roomId, { type: "players" });
+      return { ok: true, code: r.code, roomId: r.roomId };
   }
-
-  if (room.status !== "lobby") return fail(MSG.started);
-  if (players.length >= MAX_PLAYERS) return fail(MSG.full);
-  if (input.nickname === undefined) {
-    return { ok: true, code: room.code, roomId: room.id, needNickname: true };
-  }
-
-  const nickname = nicknameSchema.safeParse(input.nickname);
-  if (!nickname.success) return fail(nickname.error.issues[0].message);
-
-  // 동시에 들어오면 seat 가 겹칠 수 있다. 제약에 걸리면 목록을 다시 읽고 다시 시도
-  let current = players;
-  for (let i = 0; i < MAX_PLAYERS + 1; i++) {
-    const seat = freeSeat(current);
-    if (seat === null) return fail(MSG.full);
-    try {
-      await store.insertPlayer({
-        roomId: room.id,
-        userId: user.id,
-        isGuest: user.isGuest,
-        nickname: uniqueNickname(nickname.data, current),
-        seat,
-      });
-      await store.logEvent("room_joined", { roomId: room.id, guest: user.isGuest });
-      await deps.broadcast(room.id, { type: "players" });
-      return { ok: true, code: room.code, roomId: room.id };
-    } catch (e) {
-      if (!(e instanceof UniqueViolation)) throw e;
-      // 같은 사람이 두 번 눌렀다: 이미 들어갔다
-      if (e.target === "user") return { ok: true, code: room.code, roomId: room.id };
-      current = await store.listPlayers(room.id);
-      const fresh = await store.getRoom(room.id);
-      if (!fresh || fresh.status !== "lobby") return fail(MSG.started);
-    }
-  }
-  return fail(MSG.retry);
 }
 
 // leaveRoom -------------------------------------------------------------------
@@ -190,17 +171,24 @@ export async function startGame(
 
   const room = await store.getRoom(roomId.data);
   if (!room || room.status === "ended") return fail(MSG.notFound);
-  const players = await store.listPlayers(room.id);
-  const me = players.find((p) => p.userId === user.id);
+  const lobbyPlayers = await store.listPlayers(room.id);
+  const me = lobbyPlayers.find((p) => p.userId === user.id);
   if (!me) return fail(MSG.notMember);
   if (room.hostPlayerId !== me.id) return fail(MSG.notHost);
   if (room.status !== "lobby") return fail(MSG.started);
-  // 4~6명 (AC-012)
-  if (players.length < MIN_PLAYERS) return fail(MSG.tooFew);
-  if (players.length > MAX_PLAYERS) return fail(MSG.full);
+  // 4~6명 (AC-012). 화면 안내를 빨리 주려고 먼저 한 번 보고, 확정은 상태를 바꾼 뒤 다시 본다
+  if (lobbyPlayers.length < MIN_PLAYERS) return fail(MSG.tooFew);
+  if (lobbyPlayers.length > MAX_PLAYERS) return fail(MSG.full);
 
-  // lobby → playing 을 먼저 바꿔 두 번 눌러도 한 번만 시작한다
+  // lobby → playing 을 먼저 바꿔 두 번 눌러도 한 번만 시작한다.
+  // 이 update 가 방 줄을 잠그므로 join_room 과 차례로 실행된다 (#36)
   if (!(await store.updateRoomStatus(room.id, "lobby", "playing"))) return fail(MSG.started);
+  // 바꾼 뒤의 참가자로 인원 확인과 배정을 한다. 그 사이 들어온 사람도 배정을 받는다 (#36)
+  const players = await store.listPlayers(room.id);
+  if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) {
+    await store.updateRoomStatus(room.id, "playing", "lobby");
+    return fail(players.length < MIN_PLAYERS ? MSG.tooFew : MSG.full);
+  }
 
   try {
     // 배정 (spec §5): AI 1번 → 검사 실패면 1번 더 → 실패 또는 15초 초과면 규칙 배정 (NFR-003)
