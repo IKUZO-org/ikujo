@@ -1,9 +1,10 @@
 "use client";
-// S-02 홈: 방 만들기 / 코드 입력. 입장 오류는 spec S-02 표 문구 그대로 (AC-011)
+// S-02 홈: 방 만들기 / 코드 입력. 처음 연 사람에게는 온보딩(S-01)을 먼저 덮어 띄운다. 입장 오류는 spec S-02 표 문구 그대로 (AC-011)
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/Button";
 import { ErrorLine, Screen } from "@/components/Screen";
+import { FirstOnboarding } from "@/components/settings";
 import { joinRoom } from "@/server/actions/join-room";
 
 export function HomeView() {
@@ -32,6 +33,7 @@ export function HomeView() {
         </Button>
       }
     >
+      <FirstOnboarding />
       <h1 className="text-(length:--text-xl)">LAST ONE</h1>
 
       <form onSubmit={enter} className="flex flex-col gap-(--space-3)">
