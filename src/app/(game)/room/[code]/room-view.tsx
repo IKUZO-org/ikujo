@@ -30,8 +30,10 @@ export function RoomView({ title }: { title: string }) {
   const router = useRouter();
   const { state, error: loadError, reload: load, remainingMs } = useRoomState(code);
   const game = state?.status === "lobby" ? null : (state?.game ?? null);
-  // r2, r3 에는 유령의 속삭임이 신호 없이 오므로 주기적으로도 다시 읽는다 (ghost.ts whisper)
-  const whisperRounds = game?.phase === "r2" || game?.phase === "r3";
+  // r2, r3 에는 유령의 속삭임이 신호 없이 오므로 주기적으로도 다시 읽는다 (ghost.ts whisper).
+  // 유령 본인은 속삭임을 받지 않으니 다시 읽지 않는다 (자기 동작 뒤에는 reload 로 다시 읽는다, PR #49 리뷰)
+  const isGhost = !!game?.ghost && game.ghost.playerId === state?.me.playerId;
+  const whisperRounds = (game?.phase === "r2" || game?.phase === "r3") && !isGhost;
   const mine = useMine(
     game && game.phase !== "intro" ? game.id : null,
     state,
@@ -71,7 +73,6 @@ export function RoomView({ title }: { title: string }) {
     case "r3": {
       if (!game.round) return null;
       // r2 부터 희생자 폰은 유령 모드(S-10), 나머지는 라운드 + 속보 (FR-050, AC-050)
-      const isGhost = game.ghost?.playerId === state.me.playerId;
       return (
         <>
           {isGhost ? (
