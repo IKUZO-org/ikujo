@@ -46,6 +46,7 @@ export async function castVote(
   targetPlayerId: string,
   now: Date = new Date(),
 ): Promise<VoteResult> {
+  // 나간 사람(left_at)은 여기서 걸러져 투표할 수 없다 (BR-011). 다시 들어오면 join_room 이 left_at 을 비운다
   const found = await loadGameForMember(db, gameId, userId);
   if (!found) return { error: "이 판의 참가자가 아니에요." };
   const { game, playerId } = found;

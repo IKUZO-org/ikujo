@@ -115,6 +115,24 @@ describe("castVote", () => {
     expect(await gameRow(g)).toMatchObject({ phase: "reveal", outcome: "aired_off" });
   });
 
+  it("나간 사람은 투표할 수 없고, 나가기 전에 낸 표는 판정에서 빠진다 (BR-011, AC-BR-011)", async () => {
+    const g = await newGame();
+    const leave = (i: number, at: string | null) =>
+      db.from("players").update({ left_at: at }).eq("id", p[i].id);
+    try {
+      await cast(g, 0, 1);
+      await cast(g, 3, 1);
+      await leave(3, new Date().toISOString());
+      expect(await cast(g, 3, 1)).toEqual({ error: "이 판의 참가자가 아니에요." });
+      // p3 의 표가 빠져 p1 1표, p2 2표 → p2 지목 (빠지지 않으면 2:2 동점으로 재투표)
+      await cast(g, 1, 2);
+      await cast(g, 2, 2);
+      expect(await gameRow(g)).toMatchObject({ phase: "reveal", outcome: "aired_off" });
+    } finally {
+      await leave(3, null);
+    }
+  });
+
   it("유령은 투표하지 않는다 (AC-053)", async () => {
     const g = await newGame();
     expect(await cast(g, 4, 0)).toEqual({ error: "유령은 투표하지 않아요." });

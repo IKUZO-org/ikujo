@@ -69,7 +69,8 @@ export async function ghostPlayerIds(db: SupabaseClient, gameId: string): Promis
 /**
  * 투표할 사람 수와 투표한 수. 투표할 사람은 살아 있고(유령 아님, AC-053) 나가지 않은 사람 (BR-011).
  * 투표 중 다시 들어오면 left_at 이 비워져 다시 분모에 들어간다.
- * 나간 사람이 낸 표는 투표 수에서 빼서 분모와 같은 기준으로 센다
+ * 나간 사람이 낸 표는 투표 수와 판정에서 모두 뺀다 (counted). BR-011 "투표는 기권", AC-BR-011 과 맞추려고
+ * 이미 낸 표도 뺀다 `제안` (#46), PO 확인 중
  */
 export async function voteCounts(db: SupabaseClient, game: GameRow, phase: "vote" | "revote") {
   const [players, ghosts, votes] = await Promise.all([
@@ -82,16 +83,16 @@ export async function voteCounts(db: SupabaseClient, game: GameRow, phase: "vote
     ghostPlayerIds(db, game.id),
     db
       .from("votes")
-      .select("voter_player_id")
+      .select("voter_player_id, target_player_id")
       .eq("game_id", game.id)
       .eq("round", voteRound(phase))
-      .returns<{ voter_player_id: string }[]>(),
+      .returns<{ voter_player_id: string; target_player_id: string }[]>(),
   ]);
   const voters = new Set(
     (players.data ?? []).map((p) => p.id).filter((id) => !ghosts.includes(id)),
   );
-  const voted = (votes.data ?? []).filter((v) => voters.has(v.voter_player_id)).length;
-  return { total: voters.size, ready: voted };
+  const counted = (votes.data ?? []).filter((v) => voters.has(v.voter_player_id));
+  return { total: voters.size, ready: counted.length, counted };
 }
 
 // 지금 남아 있는 참가자 수와 이 단계에서 누른 사람 수. 투표 단계는 투표할 사람 수와 투표한 수
@@ -239,18 +240,12 @@ type Judged = {
   fields: { revote_candidates?: string[]; outcome?: "caught" | "aired_off" };
 };
 
-// 투표를 tally 로 판정한다 (spec S-11). 안 찍은 사람은 기권 (BR-007).
+// 투표를 판정한다 (spec S-11). 안 찍은 사람은 기권 (BR-007).
+// tally RPC 는 나간 사람의 표를 거르지 못해서, voteCounts 가 거른 표로 서버에서 최다 득표자를 센다 (마이그레이션 없이)
 // 결과(지목된 사람, 범인)는 games.outcome 과 revote_candidates 로만 남기고 응답이나 신호에 싣지 않는다 (BR-001)
 async function judge(db: SupabaseClient, game: GameRow, phase: "vote" | "revote"): Promise<Judged> {
-  const [tally, counts] = await Promise.all([
-    db.rpc("tally", { p_game_id: game.id, p_round: voteRound(phase) }),
-    voteCounts(db, game, phase),
-  ]);
-  if (tally.error) throw tally.error;
-  const decision = decideTally(
-    phase,
-    ((tally.data ?? []) as { target_player_id: string }[]).map((r) => r.target_player_id),
-  );
+  const counts = await voteCounts(db, game, phase);
+  const decision = decideTally(phase, topTargets(counts.counted.map((v) => v.target_player_id)));
   const base = { from: phase, votes: counts.ready, voters: counts.total };
   if (decision.to === "revote") {
     return { ...base, to: "revote", fields: { revote_candidates: decision.candidates } };
@@ -266,6 +261,14 @@ async function judge(db: SupabaseClient, game: GameRow, phase: "vote" | "revote"
     if (secret?.culprit_player_id === decision.accused) outcome = "caught";
   }
   return { ...base, to: "reveal", fields: { outcome } };
+}
+
+/** 가장 많이 받은 사람들 (동점이면 여럿, id 순). tally RPC 와 같은 결과 */
+function topTargets(targets: string[]): string[] {
+  const n = new Map<string, number>();
+  for (const t of targets) n.set(t, (n.get(t) ?? 0) + 1);
+  const max = Math.max(0, ...n.values());
+  return [...n.keys()].filter((t) => n.get(t) === max).sort();
 }
 
 async function logEvent(
