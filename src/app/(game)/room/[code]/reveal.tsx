@@ -166,16 +166,18 @@ function List({ children }: { children: ReactNode }) {
   return <ul className="flex w-full flex-col gap-(--space-2)">{children}</ul>;
 }
 
-/** 카드 1~9. 맞춤 해설(8)이 없으면 뺀다 (spec S-12) */
+/** 카드 1~9. 맞춤 해설(8)이 없으면 뺀다. 범인이 나가 온 해설이면 3, 9 도 뺀다 (spec S-12) */
 function buildCards({ body, personal }: Loaded): { title: string; body: ReactNode }[] {
   const cards: { title: string; body: ReactNode }[] = [
     {
       title: body.ending.text,
       body: (
         <Text>
-          {body.ending.outcome === "caught"
-            ? "범인을 지목했어요"
-            : "범인을 찾지 못해 방송이 멈췄어요"}
+          {body.ending.culpritLeft
+            ? `범인 ${body.culprit.who.nickname}이 자리를 떠나 방송이 중단됐어요`
+            : body.ending.outcome === "caught"
+              ? "범인을 지목했어요"
+              : "범인을 찾지 못해 방송이 멈췄어요"}
         </Text>
       ),
     },
@@ -188,29 +190,34 @@ function buildCards({ body, personal }: Loaded): { title: string; body: ReactNod
         </>
       ),
     },
-    {
-      title: "투표 결과",
-      body: body.votes.map((v) => (
-        <div key={v.round} className="flex w-full flex-col gap-(--space-2)">
-          {body.votes.length > 1 && (
-            <p className="text-(length:--text-sm) text-(--color-text-muted)">
-              {v.round === 1 ? "첫 투표" : "재투표"}
-            </p>
-          )}
-          <List>
-            {v.picks.length === 0 ? (
-              <Card>아무도 투표하지 않았어요</Card>
-            ) : (
-              v.picks.map((p) => (
-                <Card key={`${p.voter.nickname}-${p.target.nickname}`}>
-                  {name(p.voter)} → {name(p.target)}
-                </Card>
-              ))
-            )}
-          </List>
-        </div>
-      )),
-    },
+    // 범인이 나가 판정 없이 온 해설이면 3 투표 결과, 9 맞힌 사람을 뺀다 (D-025)
+    ...(body.ending.culpritLeft
+      ? []
+      : [
+          {
+            title: "투표 결과",
+            body: body.votes.map((v) => (
+              <div key={v.round} className="flex w-full flex-col gap-(--space-2)">
+                {body.votes.length > 1 && (
+                  <p className="text-(length:--text-sm) text-(--color-text-muted)">
+                    {v.round === 1 ? "첫 투표" : "재투표"}
+                  </p>
+                )}
+                <List>
+                  {v.picks.length === 0 ? (
+                    <Card>아무도 투표하지 않았어요</Card>
+                  ) : (
+                    v.picks.map((p) => (
+                      <Card key={`${p.voter.nickname}-${p.target.nickname}`}>
+                        {name(p.voter)} → {name(p.target)}
+                      </Card>
+                    ))
+                  )}
+                </List>
+              </div>
+            )),
+          },
+        ]),
     {
       title: "그날 밤",
       body: (
@@ -267,6 +274,7 @@ function buildCards({ body, personal }: Loaded): { title: string; body: ReactNod
     { title: "3주 차 사고의 진실", body: <Text>{body.pastTruth}</Text> },
   ];
   if (personal) cards.push({ title: "우리 판 이야기", body: <Text>{personal}</Text> });
+  if (body.ending.culpritLeft) return cards;
   cards.push({
     title: "정확히 추리한 사람",
     body:

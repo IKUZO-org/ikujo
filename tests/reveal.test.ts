@@ -28,6 +28,7 @@ const input: RevealInput = {
     { round: 2, voterId: "c", targetId: "a" },
   ],
   revoted: true,
+  culpritLeft: false,
 };
 
 describe("buildReveal", () => {

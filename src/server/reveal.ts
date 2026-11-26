@@ -8,8 +8,11 @@ export type Who = { nickname: string; character: string };
 
 /** reveals.body (data §2). 카드 번호는 S-12 순서 */
 export type RevealBody = {
-  /** 1 엔딩 (FR-061) */
-  ending: { outcome: "caught" | "aired_off"; text: string };
+  /**
+   * 1 엔딩 (FR-061). culpritLeft: 범인이 나가 판정 없이 온 해설 (D-025). 이때 votes, solvers 는 비고
+   * 화면이 카드 3, 9 를 뺀다. 이 값이 생기기 전에 만든 해설에는 없다
+   */
+  ending: { outcome: "caught" | "aired_off"; text: string; culpritLeft?: boolean };
   /** 2 범인과 동기 */
   culprit: { who: Who; motive: string };
   /** 3 투표 결과. 재투표가 있으면 둘 다, round 순서 */
@@ -37,6 +40,8 @@ export type RevealInput = {
   votes: { round: 1 | 2; voterId: string; targetId: string }[];
   /** 재투표가 있었는지 (games.revote_candidates) */
   revoted: boolean;
+  /** 범인이 나가 판정 전에 끝났는지 (games.ended_reason = culprit_left, D-025) */
+  culpritLeft: boolean;
 };
 
 export function buildReveal(scenario: Scenario, input: RevealInput): RevealBody {
@@ -50,8 +55,12 @@ export function buildReveal(scenario: Scenario, input: RevealInput): RevealBody 
   if (!culprit) throw new Error(`시나리오에 없는 범인: ${input.culpritCharacter}`);
 
   // 판정과 같은 기준: 판정 순간 접속한 사람의 표만 (D-022). reveal 은 판정 바로 뒤에 만든다
-  const counted = input.votes.filter((v) => byId.has(v.voterId) && !byId.get(v.voterId)!.left);
-  const rounds: (1 | 2)[] = input.revoted ? [1, 2] : [1];
+  // 범인이 판정 전에 나갔으면 투표 결과와 맞힌 사람은 없다. vote, revote 중이라 낸 표가 있어도 판정이
+  // 나지 않았으니 뺀다 (D-025 는 "투표 전"까지만 정함, #72 `제안`)
+  const counted = input.culpritLeft
+    ? []
+    : input.votes.filter((v) => byId.has(v.voterId) && !byId.get(v.voterId)!.left);
+  const rounds: (1 | 2)[] = input.culpritLeft ? [] : input.revoted ? [1, 2] : [1];
   const votes = rounds.map((round) => ({
     round,
     picks: counted
@@ -63,7 +72,7 @@ export function buildReveal(scenario: Scenario, input: RevealInput): RevealBody 
       }),
   }));
   // 재투표가 있었으면 마지막 투표 기준 (FR-071, AC-071)
-  const lastRound = rounds[rounds.length - 1];
+  const lastRound = rounds.at(-1);
   const solvers = counted
     .filter((v) => v.round === lastRound && v.targetId === input.culpritPlayerId)
     .flatMap((v) => who(v.voterId) ?? []);
@@ -77,7 +86,11 @@ export function buildReveal(scenario: Scenario, input: RevealInput): RevealBody 
 
   const clueText = new Map(scenario.clues.map((c) => [c.id, c.text]));
   return {
-    ending: { outcome: input.outcome, text: scenario.reveal.endings[input.outcome] },
+    ending: {
+      outcome: input.outcome,
+      text: scenario.reveal.endings[input.outcome],
+      culpritLeft: input.culpritLeft,
+    },
     culprit: { who: who(input.culpritPlayerId)!, motive: culprit.motive },
     votes,
     timeline: scenario.timeline,
