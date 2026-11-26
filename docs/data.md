@@ -1,4 +1,4 @@
-<!-- 원본: Hatch 팀 문서 "데이터 구성" 3판. 고칠 때는 Hatch에서 고치고 이 사본을 바꾼다 -->
+<!-- 원본: Hatch 팀 문서 "데이터 구성" 4판. 고칠 때는 Hatch에서 고치고 이 사본을 바꾼다 -->
 # 데이터 구성 — 「LAST ONE」
 
 ## 0. 문서 정보
@@ -7,6 +7,7 @@
 | 버전 | v0.1 |
 | 근거 | PRD 2판, 기능명세 v0.1 |
 | 저장소 | Supabase (Postgres + Auth + Realtime). 시나리오는 레포 안 JSON |
+| 바뀐 것 | 4판: 익명 사용자도 30일 보관(D-026), 24시간 활동 없는 방과 판은 ended(D-027), `ended_reason`에 `cancelled`, `stale` 추가(D-025) (§6 댓글 @uyeon0, PO 2026-11-26 확정) |
 | 상태 표시 | `확정` PRD에서 정함 · `제안` 이 문서에서 제안 |
 
 원칙
@@ -76,7 +77,7 @@ events                       기록 (분석)
 | phase_started_at, phase_ends_at | timestamptz | 타이머 기준 (서버 시간) |
 | revote_candidates | uuid[] null | 재투표 후보 (BR-013) |
 | outcome | text null | `caught` 검거 / `aired_off` 방송 중단 |
-| ended_reason | text null | `normal` / `culprit_left` (OQ-006) |
+| ended_reason | text null | `normal` / `culprit_left`(r1 이후 범인이 나가 해설로) / `cancelled`(추리 전 범인이 나가 취소) / `stale`(24시간 활동 없음) (D-025, D-027) |
 | assignment_source | text | `ai` / `rule` (BR-014) |
 | started_at, ended_at | timestamptz | |
 - **범인, 희생자는 이 표에 두지 않는다**(읽기 권한이 넓어서). `game_secrets`에 둔다
@@ -238,8 +239,11 @@ CAG의 고정 맥락이자 규칙 검사의 기준. LLM과 서버가 같은 파�
 ## 6. 보관과 삭제 (D-019)
 | 데이터 | 보관 |
 | --- | --- |
-| 손님 익명 사용자 | 판이 끝나고 7일 뒤 삭제 `제안` |
+| 손님 익명 사용자 | 판 기록과 같이 30일 뒤 삭제 `확정` (D-026). 참가자 줄이 사용자에 묶여 있어 먼저 지우면 배정, 투표가 같이 지워진다 |
 | 끝난 방, 판, 배정, 투표 | 30일 뒤 삭제 `확정` (D-019) |
+| 끝나지 않은 방, 판 | 24시간 동안 단계가 안 바뀌면(`phase_started_at`, 대기 중인 방은 `created_at` 기준) ended로 바꾸고 `ended_at`을 그 시각으로, `ended_reason=stale`. 그때부터 30일 `확정` (D-027) |
+
+정리 작업은 하루 한 번 돈다: (1) 24시간 넘은 방과 판을 ended로 (2) `ended_at`이 30일 지난 방, 판과 그 사람들의 익명 사용자를 지운다. 11단계(보관 정리)에서 만든다
 | ghost_actions.body | 판이 끝나면 지움 `제안` |
 | events | 개인 식별 없이 보관 |
 
