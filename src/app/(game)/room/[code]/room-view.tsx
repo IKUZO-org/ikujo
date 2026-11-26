@@ -1,6 +1,6 @@
 "use client";
 // 방 화면. 서버의 상태(getRoomState)를 따라 그린다 (ARCHITECTURE.md §2-1).
-// 단계(games.phase)에 따라 S-05 대기실, S-06 배정 중, S-07 오프닝, S-08 인물 카드, S-09 라운드.
+// 단계(games.phase)에 따라 S-05 대기실, S-06 배정 중, S-07 오프닝, S-08 인물 카드, S-09 라운드, S-11 투표.
 // 개인 내용(내 인물, 비밀, 단서)은 getMine 으로만 받는다 (ARCHITECTURE.md §2-3, AC-030).
 // 읽기와 room:{id} 신호 구독은 useRoomState 가 한다. 신호에는 비밀이 없다 (data §5)
 import Link from "next/link";
@@ -18,6 +18,7 @@ import { CharacterCard } from "./character-card";
 import { Opening } from "./opening";
 import { PHASE_LABELS, PhaseBar } from "./phase-bar";
 import { Round } from "./round";
+import { Vote } from "./vote";
 
 const MIN_PLAYERS = 4;
 const MAX_PLAYERS = 6;
@@ -71,8 +72,21 @@ export function RoomView({ title }: { title: string }) {
           reload={load}
         />
       ) : null;
+    case "vote":
+    case "revote":
+      return game.vote ? (
+        <Vote
+          // 재투표는 새로 그린다: vote 때 고른 칸이 남지 않게
+          key={`${game.id}:${game.phase}`}
+          game={game}
+          vote={game.vote}
+          players={state.players}
+          top={top}
+          reload={load}
+        />
+      ) : null;
     default:
-      // 투표, 해설(S-11, S-12)은 단계 9
+      // 해설(S-12)은 #47
       return (
         <GameScreen top={top}>
           <h2 className="text-(length:--text-xl) font-extrabold">
