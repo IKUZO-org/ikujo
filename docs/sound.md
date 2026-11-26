@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 | --- | --- |
 | 담당 | 종원 (소리) |
-| 상태 | P0 파일과 진행 BGM 2개 넣음 (2026-11-26, 4번 표). 오프닝 영상 V-01과 겹치는 자리 정함 (2026-11-26, 1.1). 나머지는 찾으면서 고친다 |
+| 상태 | P0, P1 파일과 진행 BGM 2개 넣음 (2026-11-26, 4번 표). 오프닝 영상 V-01과 겹치는 자리 정함 (2026-11-26, 1.1). 나머지는 찾으면서 고친다 |
 | 근거 | PRD FR-080, FR-081, NFR-006, NFR-007, §11, §28 · 기능명세 S-05~S-14 · `scenarios/live-death.json` |
 | 로드맵 | M2 소리 목록 → M3 소리 넣을 자리(개발) → M4 소리 갈아 끼우기 |
 
@@ -166,8 +166,21 @@ OP-04(메신저 알림음)는 그대로 둔다.
 | VT-01 예비 | `vt-01-alt.mp3` | TENSION DRAMA LOOP (sando2611) | https://freesound.org/s/785419/ | CC0 | 종원 |
 | RV-01 | `rv-01.mp3` | Massive Timpani 2 (Sorinious_Genious). 마지막을 총소리처럼 | https://freesound.org/s/573253/ | CC0 | 종원 |
 | RV-02 | `rv-02.mp3` | 1KHz 톤 (kwahmah_02) | https://freesound.org/s/245952/ | CC0 | 종원 |
+| LB-02 | `lb-02.mp3` | Minimalist news transition (xkeril) | https://freesound.org/s/827121/ | CC0 | 종원 |
+| OP-06 | `op-06.mp3` | Storm 03 (szelestamas) | https://freesound.org/s/638871/ | CC0 | 종원 |
+| CH-01 | `ch-01.mp3` | Card (CaptainYulef) | https://freesound.org/s/638697/ | CC0 | 종원 |
+| RD-03 | `rd-03.mp3` | MECH-KEYBOARD-01 (newagesoup) | https://freesound.org/s/348239/ | CC0 | 종원 |
+| RD-04 | `rd-04.mp3` | clock_space (HOrvi64) | https://freesound.org/s/832260/ | CC0 | 종원 |
+| RD-05 | `rd-05.mp3` | buzzer (hypocore) | https://freesound.org/s/164090/ | CC0 | 종원 |
+| R1-01 | `r1-01.mp3` | Hearthfire (Louder). 모닥불만, 파도는 없음 (SilverIllusionist) | https://freesound.org/s/836535/ | CC0 | 종원 |
+| R2-02 | `r2-02.mp3` | Rain with Roomtone on Window. 모니터 웅 소리는 없음 (TSP-Talk) | https://freesound.org/s/801345/ | CC0 | 종원 |
+| R2-04 | `r2-04.mp3` | Ringtone: 1960s office phone (knufds) | https://freesound.org/s/345805/ | CC0 | 종원 |
+| R3-02 | `r3-02.mp3` | VHS Tape Hiss (G.M_Isaac) | https://freesound.org/s/859227/ | CC0 | 종원 |
+| GH-03 | `gh-03.mp3` | ewspr_20 (artfwo) | https://freesound.org/s/120673/ | CC0 | 종원 |
+| VT-03 | `vt-03.mp3` | Dissonant Piano Sting 5 (nomiqbomi) | https://freesound.org/s/578356/ | CC0 | 종원 |
+| RV-03 | `rv-03.mp3` | Somber Piano Chord Progression D 76bpm (CVLTIV8R) | https://freesound.org/s/807111/ | CC0 | 종원 |
 
-P0는 모두 있다 (OP-03, OP-08 내레이션은 TTS 없이 글로 정함, 2번). P1, P2는 다음에 찾는다.
+P0는 모두 있다 (OP-03, OP-08 내레이션은 TTS 없이 글로 정함, 2번). P1도 모두 있다 (R2-03은 목소리 없이 글로, OP-07은 뺌). P2는 다음에 찾는다.
 
 ## 5. 정할 것
 - ~~OQ-011 목소리~~: TTS 없이 자막과 글로 정함 (2026-11-26, 위 2번). PRD에서 닫을 차례
