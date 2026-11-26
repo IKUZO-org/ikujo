@@ -10,4 +10,6 @@ export const SIGNAL_EVENT = "signal";
 export type RoomSignal =
   | { type: "players" }
   | { type: "phase"; phase: string; endsAt: string | null }
-  | { type: "count"; ready: number; votes?: number };
+  | { type: "count"; ready: number; votes?: number }
+  // 출몰 (FR-053). 유령의 말은 모두에게 보이는 공용 글이라 실어도 된다 (data §5)
+  | { type: "haunt"; body: string };
