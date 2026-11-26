@@ -385,10 +385,30 @@ export function supabaseRoomStore(db: Db): RoomStore {
       return data?.culprit_character ?? null;
     },
 
-    async updateGamePhase(gameId, from, to) {
+    async getCulpritPlayerId(gameId) {
+      const { data, error } = await db
+        .from("game_secrets")
+        .select("culprit_player_id")
+        .eq("game_id", gameId)
+        .maybeSingle<{ culprit_player_id: string }>();
+      check(error);
+      return data?.culprit_player_id ?? null;
+    },
+
+    async updateGamePhase(gameId, from, to, end) {
+      const now = new Date().toISOString();
       const { data, error } = await db
         .from("games")
-        .update({ phase: to, phase_started_at: new Date().toISOString(), phase_ends_at: null })
+        .update({
+          phase: to,
+          phase_started_at: now,
+          phase_ends_at: null,
+          ...(end && {
+            outcome: end.outcome ?? null,
+            ended_reason: end.endedReason,
+            ended_at: to === "ended" ? now : null,
+          }),
+        })
         .eq("id", gameId)
         .eq("phase", from)
         .select("id");

@@ -1,6 +1,7 @@
 // 가짜 Supabase: RoomStore 를 메모리로. 001_core.sql 의 unique 제약을 똑같이 흉내 낸다.
 import {
   UniqueViolation,
+  type GameEnd,
   type GameRow,
   type GhostActionRow,
   type NewGame,
@@ -13,7 +14,7 @@ import { MAX_PLAYERS, freeSeat, uniqueNickname } from "@/server/rooms/core";
 export type MemoryStore = RoomStore & {
   rooms: RoomRow[];
   players: PlayerRow[];
-  games: (GameRow & { roomId: string; game: NewGame })[];
+  games: (GameRow & { roomId: string; game: NewGame; end?: GameEnd })[];
   events: { name: string; props: Record<string, unknown> }[];
   revealed: { gameId: string; clueId: string; round: number }[];
   readies: { gameId: string; playerId: string; phase: string }[];
@@ -170,10 +171,14 @@ export function memoryStore(): MemoryStore {
     async getCulpritCharacter(gameId) {
       return s.games.find((x) => x.id === gameId)?.game.secret.culpritCharacter ?? null;
     },
-    async updateGamePhase(gameId, from, to) {
+    async getCulpritPlayerId(gameId) {
+      return s.games.find((x) => x.id === gameId)?.game.secret.culpritPlayerId ?? null;
+    },
+    async updateGamePhase(gameId, from, to, end) {
       const g = s.games.find((x) => x.id === gameId);
       if (!g || g.phase !== from) return false;
       g.phase = to;
+      if (end) g.end = end;
       g.phaseEndsAt = null;
       return true;
     },
