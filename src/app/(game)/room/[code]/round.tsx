@@ -2,6 +2,7 @@
 // S-09 라운드 (FR-040~043). 공용 / 내 것 두 탭 (spec §2).
 // 공용 탭: 라운드 n/3, 장소와 시점, 이번 공용 단서, 지금까지 공용 단서, 준비 완료 n/N (getRoomState).
 // 내 것 탭: 나에게만 온 단서 (getMine). 개인 화면 표시 + 가리기 (DESIGN.md §4).
+// 새로 고쳐도 고른 탭은 그대로, 개인 내용은 다시 가린다 (#44).
 // 새 개인 단서가 오면 내 것 탭에 점 + navigator.vibrate (NFR-006). 진동만으로 알리지 않는다 (DESIGN.md §7).
 // 준비 완료는 현황에만 반영하고, 다음 라운드는 타이머로만 넘어간다 (OQ-007 임시 결정, spec §9).
 // 이벤트 알림(FR-044, S-14 덮는 화면)은 단계 8, 9 에서 붙인다
@@ -28,7 +29,10 @@ export function Round({
   top: ReactNode;
   reload: () => Promise<void>;
 }) {
-  const [tab, setTab] = useState<Tab>("public");
+  // 고른 탭은 이 판, 이 라운드 동안 기억한다: 새로 고쳐도 그 탭으로 (AC-NFR-002, #44).
+  // 라운드가 바뀌면 key 가 달라 "모두의 단서"부터 (새 공용 단서를 먼저 보게)
+  const tabKey = `last-one:round-tab:${game.id}:${game.phase}`;
+  const [tab, setTab] = useState<Tab>(() => (readItem(tabKey) === "mine" ? "mine" : "public"));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const reveal = usePrivateReveal();
@@ -40,6 +44,7 @@ export function Round({
     // 내 것 탭을 열거나 닫을 때 지금 단서는 본 것으로. 다시 열면 다시 가린다 (옆 사람 시선)
     clues.markSeen();
     if (next === "mine") reveal.hide();
+    writeItem(tabKey, next);
     setTab(next);
   }
 
@@ -195,15 +200,28 @@ function useClueAlert(gameId: string, clues: Clue[] | null, viewing: boolean) {
 
 function readSeen(key: string): Set<string> {
   try {
-    return new Set(JSON.parse(sessionStorage.getItem(key) ?? "[]") as string[]);
+    return new Set(JSON.parse(readItem(key) ?? "[]") as string[]);
   } catch {
     return new Set();
   }
 }
 
 function writeSeen(key: string, seen: Set<string>) {
+  writeItem(key, JSON.stringify([...seen]));
+}
+
+// sessionStorage 는 편의용이다. 못 쓰는 브라우저(사생활 보호 모드 등)에서는 없는 것처럼 둔다
+function readItem(key: string): string | null {
   try {
-    sessionStorage.setItem(key, JSON.stringify([...seen]));
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeItem(key: string, value: string) {
+  try {
+    sessionStorage.setItem(key, value);
   } catch {
     // 저장 못 해도 이 화면에서는 state 로 기억한다
   }
