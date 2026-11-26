@@ -35,6 +35,19 @@ export type AssignmentRow = {
   alibiId: string;
   isCulprit: boolean;
   clueIds: Partial<Record<"r1" | "r2" | "r3", string[]>>;
+  /** r2 부터 희생자만 true (data §2, FR-050) */
+  isGhost: boolean;
+};
+
+/** 유령의 속삭임, 출몰 한 줄 (data §2 ghost_actions). 속삭임은 서버 안에서 당사자 것만 골라 돌려준다 */
+export type GhostActionRow = {
+  id: string;
+  kind: "whisper" | "haunt";
+  fromPlayerId: string;
+  /** whisper 만 */
+  toPlayerId: string | null;
+  round: number;
+  body: string;
 };
 
 export type NewGame = {
@@ -62,7 +75,8 @@ export type NewGame = {
   }[];
 };
 
-export type UniqueTarget = "code" | "seat" | "user";
+// haunt: 판에 출몰 1번 (AC-053), whisper: 라운드당 속삭임 1번 (OQ-005, 005_ghost.sql)
+export type UniqueTarget = "code" | "seat" | "user" | "haunt" | "whisper";
 
 export class UniqueViolation extends Error {
   constructor(readonly target: UniqueTarget) {
@@ -122,9 +136,18 @@ export interface RoomStore {
   getVoteInfo(
     gameId: string,
     round: 1 | 2,
-  ): Promise<{ votedPlayerIds: string[]; ghostPlayerIds: string[]; revoteCandidates: string[] }>;
+  ): Promise<{ votedPlayerIds: string[]; revoteCandidates: string[] }>;
   /** 한 사람의 배정. 본인 확인은 부르는 쪽(getMine)이 한다 */
   getAssignment(gameId: string, playerId: string): Promise<AssignmentRow | null>;
+
+  /** 유령이 된 플레이어 (assignments.is_ghost). r2 전에는 null */
+  getGhost(gameId: string): Promise<{ playerId: string; characterId: string } | null>;
+  /** 이번 판 범인의 특징 id (game_secrets.ghost_trait). 유령 본인 요청에만 쓴다 */
+  getGhostTrait(gameId: string): Promise<string | null>;
+  /** 이 판의 속삭임, 출몰. 누구에게 보여 줄지는 부르는 쪽이 고른다 */
+  listGhostActions(gameId: string): Promise<GhostActionRow[]>;
+  /** 출몰 두 번은 UniqueViolation('haunt'), 같은 라운드 속삭임 두 번은 UniqueViolation('whisper') */
+  insertGhostAction(a: { gameId: string } & Omit<GhostActionRow, "id">): Promise<void>;
 
   /** 기록 (spec §7). 개인 식별 정보는 넣지 않는다 (data §6) */
   logEvent(

@@ -57,6 +57,8 @@ const UNIQUE_NAMES: [string, UniqueViolation["target"]][] = [
   ["rooms_code_active_key", "code"],
   ["players_room_id_seat_key", "seat"],
   ["players_room_id_user_id_key", "user"],
+  ["ghost_actions_one_haunt_key", "haunt"],
+  ["ghost_actions_one_whisper_per_round_key", "whisper"],
 ];
 
 function check(error: PostgrestError | null): void {
@@ -272,7 +274,7 @@ export function supabaseRoomStore(db: Db): RoomStore {
     },
 
     async getVoteInfo(gameId, round) {
-      const [votes, ghosts, game] = await Promise.all([
+      const [votes, game] = await Promise.all([
         db
           .from("votes")
           .select("voter_player_id")
@@ -280,23 +282,15 @@ export function supabaseRoomStore(db: Db): RoomStore {
           .eq("round", round)
           .returns<{ voter_player_id: string }[]>(),
         db
-          .from("assignments")
-          .select("player_id")
-          .eq("game_id", gameId)
-          .eq("is_ghost", true)
-          .returns<{ player_id: string }[]>(),
-        db
           .from("games")
           .select("revote_candidates")
           .eq("id", gameId)
           .maybeSingle<{ revote_candidates: string[] | null }>(),
       ]);
       check(votes.error);
-      check(ghosts.error);
       check(game.error);
       return {
         votedPlayerIds: (votes.data ?? []).map((v) => v.voter_player_id),
-        ghostPlayerIds: (ghosts.data ?? []).map((g) => g.player_id),
         revoteCandidates: game.data?.revote_candidates ?? [],
       };
     },
@@ -304,7 +298,7 @@ export function supabaseRoomStore(db: Db): RoomStore {
     async getAssignment(gameId, playerId) {
       const { data, error } = await db
         .from("assignments")
-        .select("character_id, secret_id, alibi_id, is_culprit, clue_ids")
+        .select("character_id, secret_id, alibi_id, is_culprit, clue_ids, is_ghost")
         .eq("game_id", gameId)
         .eq("player_id", playerId)
         .maybeSingle<{
@@ -313,6 +307,7 @@ export function supabaseRoomStore(db: Db): RoomStore {
           alibi_id: string;
           is_culprit: boolean;
           clue_ids: AssignmentRow["clueIds"] | null;
+          is_ghost: boolean;
         }>();
       check(error);
       if (!data) return null;
@@ -322,7 +317,70 @@ export function supabaseRoomStore(db: Db): RoomStore {
         alibiId: data.alibi_id,
         isCulprit: data.is_culprit,
         clueIds: data.clue_ids ?? {},
+        isGhost: data.is_ghost,
       };
+    },
+
+    async getGhost(gameId) {
+      const { data, error } = await db
+        .from("assignments")
+        .select("player_id, character_id")
+        .eq("game_id", gameId)
+        .eq("is_ghost", true)
+        .limit(1)
+        .maybeSingle<{ player_id: string; character_id: string }>();
+      check(error);
+      return data ? { playerId: data.player_id, characterId: data.character_id } : null;
+    },
+
+    async getGhostTrait(gameId) {
+      const { data, error } = await db
+        .from("game_secrets")
+        .select("ghost_trait")
+        .eq("game_id", gameId)
+        .maybeSingle<{ ghost_trait: string }>();
+      check(error);
+      return data?.ghost_trait ?? null;
+    },
+
+    async listGhostActions(gameId) {
+      const { data, error } = await db
+        .from("ghost_actions")
+        .select("id, kind, from_player_id, to_player_id, round, body")
+        .eq("game_id", gameId)
+        .order("at")
+        .returns<
+          {
+            id: number;
+            kind: "whisper" | "haunt";
+            from_player_id: string;
+            to_player_id: string | null;
+            round: number;
+            body: string | null;
+          }[]
+        >();
+      check(error);
+      return (data ?? []).map((a) => ({
+        id: String(a.id),
+        kind: a.kind,
+        fromPlayerId: a.from_player_id,
+        toPlayerId: a.to_player_id,
+        round: a.round,
+        // 판이 끝나면 body 를 지운다 (data §2 `제안`)
+        body: a.body ?? "",
+      }));
+    },
+
+    async insertGhostAction(a) {
+      const { error } = await db.from("ghost_actions").insert({
+        game_id: a.gameId,
+        kind: a.kind,
+        from_player_id: a.fromPlayerId,
+        to_player_id: a.toPlayerId,
+        round: a.round,
+        body: a.body,
+      });
+      check(error);
     },
 
     async logEvent(name, { roomId, gameId, ...props }) {

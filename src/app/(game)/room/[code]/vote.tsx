@@ -31,7 +31,7 @@ export function Vote({
   // revote 는 동점자만, vote 는 후보 + 흐린 유령 칸 (DESIGN.md §6 투표 칸)
   const tiles = [
     ...v.candidates.map((id) => ({ id, ghost: false })),
-    ...(revote ? [] : v.ghosts.map((id) => ({ id, ghost: true }))),
+    ...(revote || !game.ghost ? [] : [{ id: game.ghost.playerId, ghost: true }]),
   ];
   const locked = !v.canVote || v.voted;
 

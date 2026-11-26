@@ -15,3 +15,10 @@ export const roomCodeSchema = z
   .regex(/^[0-9]{6}$/, "방 코드는 숫자 6자리예요");
 
 export const roomIdSchema = z.uuid("잘못된 방이에요");
+
+// S-10: 속삭임, 출몰 글 1~80자 (spec S-10 `제안`, data §2 ghost_actions.body)
+export const ghostBodySchema = z
+  .string()
+  .trim()
+  .min(1, "한 글자 이상 써 주세요")
+  .max(80, "80자까지 쓸 수 있어요");

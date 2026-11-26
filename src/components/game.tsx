@@ -1,7 +1,8 @@
 // 게임 화면 조각 (DESIGN.md §3, §4, §6): 화면 틀, 개인 화면 표시, 타이머, 탭, 카드, 가리기, 뱃지.
 // 색, 글자, 간격은 토큰 이름만 쓴다 (§5). 넓은 화면 분기 없음 (§2)
 "use client";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Button } from "./Button";
 
 // 화면 틀 -----------------------------------------------------------------------
 
@@ -160,6 +161,96 @@ export function Chip({ children }: { children: ReactNode }) {
     <span className="rounded-(--radius-full) border-[1.2px] border-(--color-text) px-(--space-2) py-0.5 text-(length:--text-sm) font-bold">
       {children}
     </span>
+  );
+}
+
+// 시트, 덮는 화면 -------------------------------------------------------------------
+
+/**
+ * 아래에서 올라오는 시트 (§6 Sheet). surface 면, 위 모서리 radius-md, shadow-overlay, 뒤는 검게 가림, 손잡이 막대.
+ * 뒤를 누르거나 Esc, "닫기" 로 닫는다
+ */
+export function Sheet({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-30 flex justify-center">
+      <button
+        type="button"
+        aria-label="닫기"
+        onClick={onClose}
+        className="absolute inset-0 bg-(--color-bg)/80"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="relative mt-auto flex w-full max-w-[430px] flex-col gap-(--space-3) rounded-t-(--radius-md) bg-(--color-surface) px-(--space-4) pt-(--space-2) pb-[max(env(safe-area-inset-bottom),var(--space-4))] text-center text-(--color-text) shadow-(--shadow-overlay)"
+      >
+        <span
+          aria-hidden
+          className="mx-auto h-1 w-10 rounded-(--radius-full) bg-(--color-text-muted)"
+        />
+        <h2 className="text-(length:--text-xl) font-extrabold">{title}</h2>
+        {children}
+        <Button variant="secondary" onClick={onClose}>
+          닫기
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 화면 전체를 덮는 연출 (§3 "가상 폰 연출은 화면 전체를 덮고, 닫으면 원래 화면으로", S-14).
+ * 게임 속 모양으로 새로 그린다: 실제 방송사, 앱 모양을 따라 하지 않는다 (BR-008).
+ * 그래픽 영역은 어셋이 오면 채운다 (지금은 검정 그대로, PRD §24)
+ */
+export function Cover({
+  label,
+  title,
+  children,
+  action,
+  onClose,
+}: {
+  label: ReactNode;
+  title: ReactNode;
+  children?: ReactNode;
+  action: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-label={typeof title === "string" ? title : undefined}
+      className="fixed inset-0 z-40 flex justify-center bg-(--color-bg)"
+    >
+      <div className="flex min-h-dvh w-full max-w-[430px] flex-col px-(--space-4) pt-[env(safe-area-inset-top)] text-(--color-text)">
+        <div aria-hidden className="flex min-h-24 flex-1 bg-(--color-bg)" />
+        <div className="flex flex-col items-center gap-(--space-2) pb-(--space-3) text-center">
+          {label}
+          <h2 className="text-(length:--text-xl) font-extrabold">{title}</h2>
+          {children}
+        </div>
+        <div className="pt-(--space-3) pb-[max(env(safe-area-inset-bottom),var(--space-4))]">
+          <Button autoFocus onClick={onClose}>
+            {action}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
