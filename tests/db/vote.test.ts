@@ -9,6 +9,7 @@ type Row = Record<string, unknown> & { id: string };
 let db: SupabaseClient;
 let users: { client: SupabaseClient; userId: string }[];
 let p: Row[];
+let roomCode: string;
 
 const CHARACTERS = ["fav", "villain", "athlete", "writer", "influencer"];
 
@@ -49,6 +50,17 @@ async function newGame(phase: "vote" | "revote" = "vote", revoteCandidates?: str
 const cast = (gameId: string, voter: number, target: number) =>
   castVote(db, users[voter].userId, gameId, p[target].id);
 
+// 나가기는 left_at 을 바로 쓰고, 돌아오기는 실제 경로인 join_room 으로 (rejoined_at 을 남긴다, 007)
+const leave = (i: number) =>
+  db.from("players").update({ left_at: new Date().toISOString() }).eq("id", p[i].id);
+const rejoin = (i: number) =>
+  db.rpc("join_room", {
+    p_code: roomCode,
+    p_user_id: users[i].userId,
+    p_is_guest: true,
+    p_nickname: null,
+  });
+
 async function gameRow(gameId: string) {
   const { data } = await db
     .from("games")
@@ -61,8 +73,9 @@ async function gameRow(gameId: string) {
 beforeAll(async () => {
   db = serviceClient();
   users = await Promise.all([guest(), guest(), guest(), guest(), guest()]);
+  roomCode = String(Math.floor(100000 + Math.random() * 900000));
   const [room] = await insert<Row>(db, "rooms", {
-    code: String(Math.floor(100000 + Math.random() * 900000)),
+    code: roomCode,
     status: "playing",
   });
   p = await insert<Row>(
@@ -137,5 +150,42 @@ describe("castVote", () => {
   it("유령은 투표하지 않는다 (AC-053)", async () => {
     const g = await newGame();
     expect(await cast(g, 4, 0)).toEqual({ error: "유령은 투표하지 않아요." });
+  });
+
+  it("투표 뒤 나갔다 판정 전에 돌아오면 한 번 바꿀 수 있고, 판정에 바뀐 표가 들어간다 (D-022)", async () => {
+    const g = await newGame();
+    await cast(g, 3, 1);
+    await leave(3);
+    await rejoin(3);
+    expect(await cast(g, 3, 2)).toMatchObject({ ok: true, votes: 1 });
+    // 바꾼 뒤에는 다시 나갔다 오기 전까지 또 바꿀 수 없다
+    expect(await cast(g, 3, 1)).toEqual({ error: "이미 투표했어요." });
+    await cast(g, 0, 1);
+    await cast(g, 1, 2);
+    await cast(g, 2, 1);
+    // 바뀐 표가 들어가 p1 2표, p2 2표 → 재투표 (안 바뀌었으면 p1 3표)
+    expect(await gameRow(g)).toMatchObject({ phase: "revote" });
+
+    // 재투표도 같은 원칙
+    await cast(g, 3, 1);
+    await leave(3);
+    await rejoin(3);
+    expect(await cast(g, 3, 2)).toMatchObject({ ok: true });
+    await cast(g, 0, 2);
+    await cast(g, 1, 1);
+    await cast(g, 2, 1);
+    expect(await gameRow(g)).toMatchObject({ phase: "reveal", outcome: "aired_off" });
+  });
+
+  it("판정 뒤에 돌아온 사람은 바꿀 수 없다 (D-022)", async () => {
+    const g = await newGame();
+    await cast(g, 3, 1);
+    await leave(3);
+    await cast(g, 0, 0);
+    await cast(g, 1, 0);
+    await cast(g, 2, 0);
+    expect(await gameRow(g)).toMatchObject({ phase: "reveal" });
+    await rejoin(3);
+    expect(await cast(g, 3, 0)).toEqual({ error: "지금은 투표 시간이 아니에요." });
   });
 });

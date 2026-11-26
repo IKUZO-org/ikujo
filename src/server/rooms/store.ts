@@ -137,6 +137,11 @@ export interface RoomStore {
     gameId: string,
     round: 1 | 2,
   ): Promise<{ votedPlayerIds: string[]; revoteCandidates: string[] }>;
+  /**
+   * 투표한 뒤 나갔다가 돌아와서 아직 바꿀 수 있는 내 표의 대상 (D-022). 바꿀 수 없으면 null.
+   * 기준은 game-vote.ts changeVoteAfterRejoin 과 같다: votes.at < players.rejoined_at
+   */
+  getChangeableVote(gameId: string, round: 1 | 2, playerId: string): Promise<string | null>;
   /** 이 판에 배정된 player id. 그 판 참가자를 셀 때 쓴다 (다시 하기 전 판에 나간 사람은 없다, D-023) */
   listAssignedPlayerIds(gameId: string): Promise<string[]>;
   /** 한 사람의 배정. 본인 확인은 부르는 쪽(getMine)이 한다 */
