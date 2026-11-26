@@ -7,6 +7,7 @@ import {
   type RoomRow,
   type RoomStore,
 } from "@/server/rooms/store";
+import { MAX_PLAYERS, freeSeat, uniqueNickname } from "@/server/rooms/core";
 
 export type MemoryStore = RoomStore & {
   rooms: RoomRow[];
@@ -15,8 +16,6 @@ export type MemoryStore = RoomStore & {
   events: { name: string; props: Record<string, unknown> }[];
   revealed: { gameId: string; clueId: string; round: number }[];
   readies: { gameId: string; playerId: string; phase: string }[];
-  /** 다음 insertPlayer 직전에 끼어드는 일 (동시 입장 흉내) */
-  beforeInsertPlayer?: () => void;
 };
 
 export function memoryStore(): MemoryStore {
@@ -62,9 +61,6 @@ export function memoryStore(): MemoryStore {
         .map((p) => ({ ...p }));
     },
     async insertPlayer(p) {
-      const hook = s.beforeInsertPlayer;
-      s.beforeInsertPlayer = undefined;
-      hook?.();
       if (p.seat < 1 || p.seat > 6) throw new Error("check violation: seat");
       if (s.players.some((x) => x.roomId === p.roomId && x.userId === p.userId))
         throw new UniqueViolation("user");
@@ -80,6 +76,30 @@ export function memoryStore(): MemoryStore {
     },
     async setPlayerLeftAt(playerId, leftAt) {
       s.players.find((p) => p.id === playerId)!.leftAt = leftAt;
+    },
+    // join_room (004_join_room.sql) 과 같은 규칙. 메모리라 잠금은 필요 없다
+    async joinRoom({ code, userId, isGuest, nickname }) {
+      const room = s.rooms.find((r) => r.code === code && r.status !== "ended");
+      if (!room) return { result: "not_found" };
+      const at = { roomId: room.id, code: room.code };
+      const players = s.players.filter((p) => p.roomId === room.id);
+      const me = players.find((p) => p.userId === userId);
+      if (me) {
+        if (!me.leftAt) return { result: "member", ...at };
+        me.leftAt = null;
+        return { result: "rejoined", ...at };
+      }
+      if (room.status !== "lobby") return { result: "started", ...at };
+      if (players.length >= MAX_PLAYERS) return { result: "full", ...at };
+      if (nickname === null) return { result: "need_nickname", ...at };
+      await s.insertPlayer({
+        roomId: room.id,
+        userId,
+        isGuest,
+        nickname: uniqueNickname(nickname, players),
+        seat: freeSeat(players)!,
+      });
+      return { result: "joined", ...at };
     },
     async createGame(game) {
       const row = {
