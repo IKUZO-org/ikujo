@@ -81,7 +81,7 @@ async function revealInput(db: SupabaseClient, gameId: string) {
 
 /**
  * reveal 진입 때 한 번 (advancePhase 의 단계를 넘긴 호출만 부른다).
- * 카드 1~7, 9 는 바로 넣고, 8(personal)은 응답을 붙잡지 않고 뒤에서 채운다 (#47).
+ * 카드 1~7, 9 는 바로 넣고, 8(personal)은 응답을 붙잡지 않고 뒤에서 채운다.
  * 범인과 개별 투표는 여기서 처음 reveals 로 옮긴다: reveal 전에는 reveals 에 줄이 없다 (data §2)
  */
 export async function createReveal(db: SupabaseClient, gameId: string): Promise<void> {

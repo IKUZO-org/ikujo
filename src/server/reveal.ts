@@ -68,7 +68,7 @@ export function buildReveal(scenario: Scenario, input: RevealInput): RevealBody 
     .filter((v) => v.round === lastRound && v.targetId === input.culpritPlayerId)
     .flatMap((v) => who(v.voterId) ?? []);
 
-  // 시나리오에 "의미" 설명 글이 없어 특징 글과 해당 인물로만 만든다 (#47)
+  // 시나리오에 "의미" 설명 글이 없어 특징 글과 해당 인물로만 만든다
   const trait = scenario.traits.find((t) => t.id === input.ghostTrait);
   const matches = input.players
     .filter((p) => trait?.characters.includes(p.characterId))

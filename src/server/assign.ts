@@ -38,7 +38,7 @@ export function culpritCandidates(scenario: Scenario, n: PlayerCount) {
 
 /**
  * 다시 하기 때 지난 판 범인은 고르지 않는다. 다른 후보가 없으면 그대로 둔다.
- * spec §5-2 "지난 판 범인(같은 무리 연속이면 피하기 `제안`)" 을 따른다 (#47)
+ * spec §5-2 "지난 판 범인(같은 무리 연속이면 피하기 `제안`)" 을 따른다
  */
 export function avoidPrevious<T extends { character: string }>(
   candidates: T[],
