@@ -1,7 +1,10 @@
 name: 할 일
 description: 개발 단계나 기능 하나
-title: "[단계 N] "  # 문서 고치기는 [문서], 세팅은 [세팅]
+title: "[T번호][단계 N] "  # T번호는 과제 체크리스트 번호(CONTRIBUTING 이슈). 문서 고치기는 [문서], 세팅은 [세팅]
 body:
+  - type: markdown
+    attributes:
+      value: "제목 앞 `[T번호]`는 팀 Hatch 과제 체크리스트 번호입니다 (Hatch가 이 번호로 이슈와 PR을 잇습니다). 번호 표는 [CONTRIBUTING.md 이슈](https://github.com/IKUZO-org/ikujo/blob/develop/CONTRIBUTING.md#이슈-작업은-반드시-이슈부터)"
   - type: input
     id: refs
     attributes:

@@ -5,7 +5,7 @@
 
 ## 1. 세션을 열면
 1. `git config ikujo.login` 을 본다. 비어 있으면 깃허브 아이디를 묻고 `git config ikujo.login <아이디>` 로 저장한다 (이 레포에만). 아래 `<나>` 는 이 값의 소문자
-2. **이슈부터.** 일을 시작하기 전에 그 일의 열린 이슈 번호를 확정한다. 사용자가 번호를 말하지 않았으면 `gh issue list --assignee @me --state open` 로 찾아 보여 주고 고르게 한다. 맞는 이슈가 없으면 [할 일 템플릿](.github/ISSUE_TEMPLATE/task.yml)의 칸(문서 번호, 할 일, 끝났다고 보는 기준)을 채운 초안을 보여 주고, 사용자가 좋다고 하면 `gh issue create --assignee @me` 로 만든다 (`gh` 가 없으면 `https://github.com/IKUZO-org/ikujo/issues/new/choose` 링크). 이슈 없이 코드를 고치지 않는다
+2. **이슈부터.** 일을 시작하기 전에 그 일의 열린 이슈 번호를 확정한다. 사용자가 번호를 말하지 않았으면 `gh issue list --assignee @me --state open` 로 찾아 보여 주고 고르게 한다. 맞는 이슈가 없으면 [할 일 템플릿](.github/ISSUE_TEMPLATE/task.yml)의 칸(문서 번호, 할 일, 끝났다고 보는 기준)을 채운 초안을 보여 주고(제목 앞 `[T번호]`는 [CONTRIBUTING.md](CONTRIBUTING.md) 이슈 절의 표에서 고른다), 사용자가 좋다고 하면 `gh issue create --assignee @me` 로 만든다 (`gh` 가 없으면 `https://github.com/IKUZO-org/ikujo/issues/new/choose` 링크). 이슈 없이 코드를 고치지 않는다
 3. 지금 브랜치를 본다. `main` 이나 `develop` 이면 코드를 고치기 전에 `develop` 에서 브랜치를 만든다 (3번)
 4. 시킨 일이 docs의 어느 번호(FR, BR, AC, S-, 단계)인지 찾아 [docs/prd.md](docs/prd.md), [docs/spec.md](docs/spec.md), [docs/data.md](docs/data.md)에서 그 부분을 읽는다. 단계별 담당과 할 말은 [docs/dev-prompt.md](docs/dev-prompt.md), 지금 어느 마일스톤인지와 단계 순서는 [docs/roadmap.md](docs/roadmap.md)
 5. 일의 종류에 맞는 규칙 문서를 **코드를 쓰기 전에** 읽는다:
