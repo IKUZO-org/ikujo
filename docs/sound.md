@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 | --- | --- |
 | 담당 | 종원 (소리) |
-| 상태 | 초안 `제안`. 소리 담당이 찾으면서 고친다 |
+| 상태 | P0 14개와 진행 BGM 2개 파일 넣음 (2026-11-26, 4번 표). 나머지는 찾으면서 고친다 |
 | 근거 | PRD FR-080, FR-081, NFR-006, NFR-007, §11, §28 · 기능명세 S-05~S-14 · `scenarios/live-death.json` |
 | 로드맵 | M2 소리 목록 → M3 소리 넣을 자리(개발) → M4 소리 갈아 끼우기 |
 
@@ -32,13 +32,19 @@
 | ID | 언제 | 소리 | 종류 | 길이 · 반복 | 어느 폰 | 소리 끄면 | 우선 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | OP-01 | 배정 중 | 낮은 대기 음악 | BGM | 루프 | 방장 | "진행자가 사건을 준비하고 있어요" | P2 |
-| OP-02 | 방송 예고 | 예능 오프닝 징글 | 효과음 | 3~5초 | 방장 | 예고 글 | P0 |
+| OP-02 | 방송 예고부터 오프닝 내내 | 미스터리 오케스트라 서스펜스 (징글 대신) | BGM | 루프, 82초 | 방장 | 예고 글 | P0 |
 | OP-03 | 방송 예고 | 진행자 내레이션 | TTS | 20~30초 | 방장 | 같은 글 | P0 |
 | OP-04 | 단톡방에 PD 메시지 (21:30) | 게임 속 메신저 알림음 + 타이핑 | 효과음 | 1초 | 방장 | 메시지 말풍선 | P0 |
 | OP-05 | 정전 (22:00) | 차단기 "탁" + 전기 꺼지는 소리 → 정적 | 효과음 | 2초 | 방장 | 화면 암전 | P0 |
 | OP-06 | 정전 동안 | 폭풍, 파도 | 앰비언스 | 루프, 10초 안팎 | 방장 | 없음 | P1 |
 | OP-07 | 비상 전원 (22:12) | 형광등 켜지는 소리 | 효과음 | 1~2초 | 방장 | 화면 밝아짐 | P1 |
 | OP-08 | PD 발견 | 긴장 스팅 + 발견 내레이션 | 효과음 + TTS | 2초 + 15초 | 방장 | 같은 글 | P0 |
+
+### 게임 진행 BGM `제안`
+| ID | 언제 | 소리 | 종류 | 길이 · 반복 | 어느 폰 | 소리 끄면 | 우선 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| BG-01 | 라운드 진행 중 (어느 라운드에 쓸지 개발과 정함) | OP-02와 같은 묶음의 서스펜스 1번 | BGM | 루프, 90초, 아주 작게 | 방장 | 없음 | P1 |
+| BG-02 | 라운드 진행 중 (BG-01과 번갈아) | 같은 묶음의 서스펜스 2번 | BGM | 루프, 82초, 아주 작게 | 방장 | 없음 | P1 |
 
 ### 인물 카드 (S-08)
 | ID | 언제 | 소리 | 종류 | 길이 · 반복 | 어느 폰 | 소리 끄면 | 우선 |
@@ -90,7 +96,7 @@
 | RV-03 | 해설 카드 넘기는 동안 | 차분한 피아노 | BGM | 루프 | 방장 | 없음 | P1 |
 | RV-04 | 카드 넘김 | 종이 넘기는 소리 | 효과음 | 0.3초 | 본인 | 없음 | P2 |
 
-모두 35개 자리(CH-02는 RD-01을 다시 씀) 중 P0 14개. 앰비언스와 BGM은 방장 폰 하나에서만 돌아서 동시에 2개 이상 겹치지 않게 한다 (앞 것을 줄이고 다음 것을 키움).
+모두 37개 자리(BG-01, BG-02 포함)(CH-02는 RD-01을 다시 씀) 중 P0 14개. 앰비언스와 BGM은 방장 폰 하나에서만 돌아서 동시에 2개 이상 겹치지 않게 한다 (앞 것을 줄이고 다음 것을 키움).
 
 ## 2. 목소리 (TTS) 대사 — OQ-011
 
@@ -124,9 +130,29 @@
 
 하지 않을 것: 카카오톡, 아이폰 같은 실제 서비스의 알림음과 벨소리를 따라 하거나 가져오기 (BR-008), 방송사 실제 징글, 유튜브 오디오 보관함 음원(유튜브 밖 사용 조건 따로 확인 필요)
 
-| ID | 파일 | 출처 URL | 라이선스 | 넣은 사람 |
-| --- | --- | --- | --- | --- |
-| | | | | |
+모두 Freesound **CC0** (출처 표시 의무 없음, 상업 이용과 재배포 가능). 받은 것은 Freesound 미리듣기 mp3이고, 크기를 맞췄다(효과음 -16 LUFS 128kbps, BGM -22 LUFS 80kbps). 원본 wav가 필요하면 같은 페이지에서 받는다.
+
+| ID | 파일 | 소리 (올린 사람) | 출처 URL | 라이선스 | 넣은 사람 |
+| --- | --- | --- | --- | --- | --- |
+| OP-02 | `op-02.mp3` | Orchestral Suspense Loop 3 (awrmacd) | https://freesound.org/s/387221/ | CC0 | 종원 |
+| BG-01 | `bg-01.mp3` | Orchestral Suspense Loop 1 (awrmacd) | https://freesound.org/s/387223/ | CC0 | 종원 |
+| BG-02 | `bg-02.mp3` | Orchestral Suspense Loop 2 (awrmacd) | https://freesound.org/s/387222/ | CC0 | 종원 |
+| OP-04 | `op-04.mp3` | Medium F# (Macsat-Rd) | https://freesound.org/s/420496/ | CC0 | 종원 |
+| OP-05 | `op-05.mp3` | Breaker Switch (ZapertyHD) | https://freesound.org/s/465696/ | CC0 | 종원 |
+| OP-08 | `op-08.mp3` | Dissonant Piano Sting 1 (nomiqbomi) | https://freesound.org/s/578353/ | CC0 | 종원 |
+| RD-01 | `rd-01.mp3` | Service Bell Ding (Qvantor) | https://freesound.org/s/879808/ | CC0 | 종원 |
+| RD-02 | `rd-02.mp3` | Whisper2 (EvaMusik) | https://freesound.org/s/832743/ | CC0 | 종원 |
+| R2-01 | `r2-01.mp3` | News Ting (robni7) | https://freesound.org/s/174027/ | CC0 | 종원 |
+| R3-01 | `r3-01.mp3` | VCR 02 (sysdub) | https://freesound.org/s/625149/ | CC0 | 종원 |
+| R3-01 예비 | `r3-01-alt.mp3` | VHS Tape Glitch Warble (Assetsmith) | https://freesound.org/s/875405/ | CC0 | 종원 |
+| GH-01 | `gh-01.mp3` | Malfunction Static (dotY21) | https://freesound.org/s/384132/ | CC0 | 종원 |
+| GH-04 | `gh-04.mp3` | 두 소리를 겹침: unnerving drone (ExcelRandom2) + Glitchy Radio Static (9voltplasma) | https://freesound.org/s/628037/ , https://freesound.org/s/724706/ | CC0 | 종원 |
+| VT-01 | `vt-01.mp3` | Tension Synth Loop (MarkAllentheProducer) | https://freesound.org/s/727059/ | CC0 | 종원 |
+| VT-01 예비 | `vt-01-alt.mp3` | TENSION DRAMA LOOP (sando2611) | https://freesound.org/s/785419/ | CC0 | 종원 |
+| RV-01 | `rv-01.mp3` | Massive Timpani 2 (Sorinious_Genious). 마지막을 총소리처럼 | https://freesound.org/s/573253/ | CC0 | 종원 |
+| RV-02 | `rv-02.mp3` | 1KHz 톤 (kwahmah_02) | https://freesound.org/s/245952/ | CC0 | 종원 |
+
+아직 없는 P0: OP-03, OP-08 내레이션(TTS, OQ-011). P1, P2는 다음에 찾는다.
 
 ## 5. 정할 것
 - OQ-011 목소리: 미리 생성한 파일 vs 사람 녹음 (위 2번)
