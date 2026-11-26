@@ -245,9 +245,9 @@ async function beginGame(
   return { ok: true, gameId: game.id };
 }
 
-// replay, endGame (S-12 카드 10) -----------------------------------------------------
+// replay, endRoom (S-12 카드 10) -----------------------------------------------------
 
-/** 방장 확인과 해설 중인 판. 다시 하기, 끝내기가 같이 쓴다 */
+/** 방장 확인과 해설 중인 판. 다시 하기, endRoom 이 같이 쓴다 */
 async function hostAtReveal(deps: Deps, input: { roomId: string }) {
   const roomId = roomIdSchema.safeParse(input.roomId);
   if (!roomId.success) return fail(MSG.notFound);
@@ -300,10 +300,11 @@ export async function replay(
 }
 
 /**
- * 끝내기 `제안`: 방장만, reveal 에서. 판과 방을 끝낸다 (spec §1.1 "방장이 '끝내기'").
- * "홈으로"는 각자 leaveRoom 으로 방을 떠나는 것이라 판에는 영향이 없다
+ * spec §4 endRoom: 방장의 "홈으로" (S-12 10번, 4판). 방장만, reveal 에서. 판을 ended, 방을 ended 로.
+ * 다른 폰은 phase 신호를 받고 "방송이 끝났어요" 를 본다. 참가자의 "홈으로" 는 leaveRoom (판에 영향 없음).
+ * spec §7 에 기록 이벤트가 없어 기록하지 않는다
  */
-export async function endGame(deps: Deps, input: { roomId: string }): Promise<Result<object>> {
+export async function endRoom(deps: Deps, input: { roomId: string }): Promise<Result<object>> {
   const found = await hostAtReveal(deps, input);
   if ("error" in found) return found;
   const { room, game } = found;

@@ -148,7 +148,7 @@ export interface RoomStore {
   getGhostTrait(gameId: string): Promise<string | null>;
   /** 이번 판 범인 인물 ID (game_secrets.culprit_character). 다시 하기의 배정 입력에만 쓴다 (spec §5-2) */
   getCulpritCharacter(gameId: string): Promise<string | null>;
-  /** 판 단계가 from 일 때만 바꾼다. 바꿨으면 true (다시 하기, 끝내기를 두 번 눌러도 한 번만) */
+  /** 판 단계가 from 일 때만 바꾼다. 바꿨으면 true (다시 하기, 방 끝내기를 두 번 눌러도 한 번만) */
   updateGamePhase(gameId: string, from: string, to: string): Promise<boolean>;
   /** 이 판의 속삭임, 출몰. 누구에게 보여 줄지는 부르는 쪽이 고른다 */
   listGhostActions(gameId: string): Promise<GhostActionRow[]>;

@@ -43,7 +43,7 @@ export function RoomView({ title }: { title: string }) {
   );
 
   if (loadError) {
-    // 방장이 끝내기를 누르면 방이 닫혀 다시 읽기가 "없는 방"이 된다.
+    // 방장이 해설에서 홈으로(endRoom)를 누르면 방이 닫혀 다시 읽기가 "없는 방"이 된다.
     // 오류 때도 state 는 마지막 것이 남아 있어서, 해설 중이었으면 끝 화면으로
     if (game?.phase === "reveal") return <Ended />;
     return (

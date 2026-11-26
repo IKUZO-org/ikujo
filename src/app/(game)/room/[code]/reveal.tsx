@@ -8,7 +8,9 @@ import { Button } from "@/components/Button";
 import { Card, GameScreen } from "@/components/game";
 import { ErrorLine } from "@/components/Screen";
 import { leaveRoom } from "@/server/actions/leave-room";
-import { endGame, getReveal, replay } from "@/server/actions/reveal";
+import { endRoom } from "@/server/actions/end-room";
+import { getReveal } from "@/server/actions/get-reveal";
+import { replay } from "@/server/actions/replay";
 import type { RevealBody, Who } from "@/server/reveal";
 import type { RoomState } from "@/server/rooms/core";
 
@@ -96,21 +98,18 @@ export function Reveal({
                 >
                   다시 하기
                 </Button>
-                <Button
-                  variant="secondary"
-                  disabled={pending}
-                  onClick={() => act(() => endGame({ roomId: state.roomId }))}
-                >
-                  끝내기
-                </Button>
               </>
             )}
             <Button
               variant="secondary"
               disabled={pending}
               onClick={() =>
+                // 방장의 홈으로는 방을 끝내고(endRoom), 참가자의 홈으로는 나만 나간다(leaveRoom) (spec S-12 10번)
                 act(
-                  () => leaveRoom({ roomId: state.roomId }),
+                  () =>
+                    state.me.isHost
+                      ? endRoom({ roomId: state.roomId })
+                      : leaveRoom({ roomId: state.roomId }),
                   () => router.push("/"),
                 )
               }
@@ -127,7 +126,7 @@ export function Reveal({
         <p className="text-(length:--text-md) text-(--color-text-muted)">
           {state.me.isHost
             ? "다시 하면 같은 방에서 범인과 단서를 새로 정해요"
-            : "방장이 다시 하기를 누르면 새 판이 시작돼요"}
+            : "방장이 다시 하기를 고르면 새 판이 시작돼요"}
         </p>
       </GameScreen>
     );
