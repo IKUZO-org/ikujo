@@ -1,16 +1,23 @@
 "use client";
 // 방 화면. 서버의 상태(getRoomState)를 따라 그린다 (ARCHITECTURE.md §2-1).
+// 단계(games.phase)에 따라 S-05 대기실, S-06 배정 중, S-07 오프닝, S-08 인물 카드, S-09 라운드.
+// 개인 내용(내 인물, 비밀, 단서)은 getMine 으로만 받는다 (ARCHITECTURE.md §2-3, AC-030).
 // 읽기와 room:{id} 신호 구독은 useRoomState 가 한다. 신호에는 비밀이 없다 (data §5)
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
+import { GameScreen } from "@/components/game";
 import { ErrorLine, Screen } from "@/components/Screen";
+import { useMine } from "@/lib/use-mine";
 import { useRoomState } from "@/lib/use-room-state";
 import { leaveRoom } from "@/server/actions/leave-room";
 import { startGame } from "@/server/actions/start-game";
 import type { RoomState } from "@/server/rooms/core";
-import { PhaseBar } from "./phase-bar";
+import { CharacterCard } from "./character-card";
+import { Opening } from "./opening";
+import { PHASE_LABELS, PhaseBar } from "./phase-bar";
+import { Round } from "./round";
 
 const MIN_PLAYERS = 4;
 const MAX_PLAYERS = 6;
@@ -19,6 +26,8 @@ export function RoomView({ title }: { title: string }) {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
   const { state, error: loadError, reload: load, remainingMs } = useRoomState(code);
+  const game = state?.status === "lobby" ? null : (state?.game ?? null);
+  const mine = useMine(game && game.phase !== "intro" ? game.id : null, state);
 
   if (loadError) {
     return (
@@ -38,13 +47,64 @@ export function RoomView({ title }: { title: string }) {
   if (state.status === "lobby")
     return <Lobby state={state} onLeft={() => router.push("/")} reload={load} />;
 
-  // 다음 단계 화면(S-06~)은 단계 5, 7에서. 지금은 진행 중임만 보여 준다
+  const top = <PhaseBar title={title} phase={game?.phase ?? null} remainingMs={remainingMs} />;
+
+  // S-06 배정 중: 방은 시작했는데 판이 아직 없다 (AI 배정 중, FR-020)
+  if (!game) return <Assigning top={top} />;
+
+  switch (game.phase) {
+    case "intro":
+      return <Opening key={game.id} game={game} top={top} reload={load} />;
+    case "secret":
+      return <CharacterCard key={game.id} game={game} mine={mine} top={top} reload={load} />;
+    case "r1":
+    case "r2":
+    case "r3":
+      // TODO(단계 8): r2 부터 희생자 폰은 유령 모드(S-10)
+      return game.round ? (
+        <Round
+          key={game.id}
+          game={{ ...game, round: game.round }}
+          mine={mine}
+          top={top}
+          reload={load}
+        />
+      ) : null;
+    default:
+      // 투표, 해설(S-11, S-12)은 단계 9
+      return (
+        <GameScreen top={top}>
+          <h2 className="text-(length:--text-xl) font-extrabold">
+            {PHASE_LABELS[game.phase] ?? ""}
+          </h2>
+          <p className="text-(length:--text-md) text-(--color-text-muted)">
+            다음 화면을 준비하고 있어요
+          </p>
+        </GameScreen>
+      );
+  }
+}
+
+// S-06 배정 중 (FR-020, NFR-003) ------------------------------------------------------
+// 15초 넘으면 "조금만 더 기다려 주세요". 그 사이 서버는 규칙 배정으로 바꾼다 (startGame)
+
+const SLOW_MS = 15_000;
+
+function Assigning({ top }: { top: ReactNode }) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), SLOW_MS);
+    return () => clearTimeout(t);
+  }, []);
   return (
-    <Screen
-      top={<PhaseBar title={title} phase={state.game?.phase ?? null} remainingMs={remainingMs} />}
-    >
-      <p className="text-(length:--text-lg)">진행자가 사건을 준비하고 있어요</p>
-    </Screen>
+    <GameScreen top={top}>
+      <h2 aria-live="polite" className="text-(length:--text-xl) font-extrabold">
+        진행자가 사건을 준비하고 있어요
+      </h2>
+      {slow && (
+        <p className="text-(length:--text-md) text-(--color-text-muted)">조금만 더 기다려 주세요</p>
+      )}
+    </GameScreen>
   );
 }
 

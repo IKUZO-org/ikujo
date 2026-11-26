@@ -5,7 +5,13 @@ import type { RoomSignal } from "@/lib/realtime";
 import { nicknameSchema, roomCodeSchema, roomIdSchema } from "@/lib/schemas";
 import type { Scenario } from "@/lib/scenario/schema";
 import { chooseAssignment, type AssignModel } from "../assign-ai";
-import { UniqueViolation, type PlayerRow, type RoomRow, type RoomStore } from "./store";
+import {
+  UniqueViolation,
+  type GameRow,
+  type PlayerRow,
+  type RoomRow,
+  type RoomStore,
+} from "./store";
 
 export const MIN_PLAYERS = 4;
 export const MAX_PLAYERS = 6;
@@ -233,8 +239,25 @@ export type RoomState = {
   status: RoomRow["status"];
   me: { playerId: string; isHost: boolean };
   players: { id: string; nickname: string; seat: number; isHost: boolean; left: boolean }[];
-  game: { id: string; phase: string; phaseEndsAt: string | null } | null;
+  game: GameState | null;
 };
+
+/** 판의 공용 정보 (spec §4 getRoomState, PRD §13 공용 화면). 비밀, 개인 단서는 넣지 않는다 */
+export type GameState = {
+  id: string;
+  phase: string;
+  phaseEndsAt: string | null;
+  /** 라운드(r1~r3)일 때만: 라운드 번호, 장소, 시점 (data §4 rounds) */
+  round: { n: 1 | 2 | 3; place: string; time: string } | null;
+  /** 이 단계에서 다음/확인/준비를 누른 인원 수와 남아 있는 인원 수, 내가 눌렀는지 */
+  ready: { count: number; total: number; mine: boolean };
+  /** 지금까지 공용으로 열린 단서 (FR-041). 열린 순서 */
+  publicClues: { id: string; round: number; text: string }[];
+};
+
+export function roundNumber(phase: string): 1 | 2 | 3 | null {
+  return phase === "r1" ? 1 : phase === "r2" ? 2 : phase === "r3" ? 3 : null;
+}
 
 /**
  * 공용 정보만 돌려준다: 방, 참가자 닉네임과 seat, 단계. user_id, 배정, 범인은 넣지 않는다 (spec §4, AC-030).
@@ -255,7 +278,8 @@ export async function getRoomState(
   const me = players.find((p) => p.userId === user.id);
   if (!me) return fail(MSG.notMember);
 
-  const game = room.status === "lobby" ? null : await store.latestGame(room.id);
+  const row = room.status === "lobby" ? null : await store.latestGame(room.id);
+  const game = row ? await gameState(deps, row, me.id, players) : null;
   return {
     ok: true,
     state: {
@@ -273,6 +297,38 @@ export async function getRoomState(
       game,
     },
     serverNow: deps.now().toISOString(),
+  };
+}
+
+async function gameState(
+  deps: Deps,
+  game: GameRow,
+  myPlayerId: string,
+  players: PlayerRow[],
+): Promise<GameState> {
+  const [revealed, readyIds] = await Promise.all([
+    deps.store.listRevealedClues(game.id),
+    deps.store.listReadyPlayerIds(game.id, game.phase),
+  ]);
+  const n = roundNumber(game.phase);
+  const r = n ? deps.scenario.rounds.find((x) => x.round === n) : undefined;
+  const clueText = new Map(deps.scenario.clues.map((c) => [c.id, c]));
+  return {
+    id: game.id,
+    phase: game.phase,
+    phaseEndsAt: game.phaseEndsAt,
+    round: n && r ? { n, place: r.place, time: r.time } : null,
+    // 인원은 game-phase.ts readyCounts 와 같은 기준: 누른 수 / 나가지 않은 참가자 수
+    ready: {
+      count: readyIds.length,
+      total: players.filter((p) => !p.leftAt).length,
+      mine: readyIds.includes(myPlayerId),
+    },
+    // 공용 단서만. revealed_clues 에는 공용 단서만 들어가지만, 한 번 더 걸러 개인 단서가 새지 않게 한다
+    publicClues: revealed.flatMap(({ clueId, round }) => {
+      const c = clueText.get(clueId);
+      return c && c.visibility === "public" ? [{ id: c.id, round, text: c.text }] : [];
+    }),
   };
 }
 
