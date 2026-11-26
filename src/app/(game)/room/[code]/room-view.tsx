@@ -63,7 +63,8 @@ export function RoomView({ title }: { title: string }) {
       // TODO(단계 8): r2 부터 희생자 폰은 유령 모드(S-10)
       return game.round ? (
         <Round
-          key={game.id}
+          // 라운드마다 새로 그린다: 탭, 가리기, 오류가 다음 라운드로 넘어가지 않게 (#44)
+          key={`${game.id}:${game.phase}`}
           game={{ ...game, round: game.round }}
           mine={mine}
           top={top}
