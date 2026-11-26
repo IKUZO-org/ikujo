@@ -135,4 +135,15 @@ describe("markReady", () => {
     const { data } = await db.from("games").select("phase").eq("id", g).single();
     expect(data?.phase).toBe("r1");
   });
+
+  it("r2 에서 유령은 분모와 누른 수에서 빠진다 (#53)", async () => {
+    const g = await newGame("r2", new Date(Date.now() + 60_000).toISOString());
+    const ghost = players[3].id;
+    await db.from("assignments").update({ is_ghost: true }).eq("game_id", g).eq("player_id", ghost);
+    // 유령이 되기 전에 누른 것이 남아 있어도 세지 않는다
+    await insert(db, "readies", { game_id: g, player_id: ghost, phase: "r2" });
+    let last;
+    for (const id of userIds.slice(0, 3)) last = await markReady(db, id, g, "r2");
+    expect(last).toMatchObject({ ok: true, ready: 3, total: 3 });
+  });
 });

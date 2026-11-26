@@ -425,6 +425,9 @@ async function gameState(
   ]);
   // 이 판의 참가자 = 이 판에 배정이 있는 사람. 다시 하기 전에 나간 사람이 돌아와도 이 판에는 없다 (D-023)
   const inGame = players.filter((p) => assigned.includes(p.id));
+  const readyMembers = new Set(
+    inGame.filter((p) => !p.leftAt && p.id !== ghost?.playerId).map((p) => p.id),
+  );
   // 속삭임은 공용에 넣지 않는다. 출몰만 (data §3 ghost_actions)
   const haunt = actions.find((a) => a.kind === "haunt");
   const ghostName = ghost
@@ -443,10 +446,10 @@ async function gameState(
     phaseEndsAt: game.phaseEndsAt,
     round: n && r ? { n, place: r.place, time: r.time } : null,
     inGame: assigned.includes(myPlayerId),
-    // 인원은 game-phase.ts readyCounts 와 같은 기준: 누른 수 / 이 판의 나가지 않은 참가자 수
+    // 인원은 game-phase.ts readyCounts 와 같은 기준: 이 판의 나가지 않은 산 사람만 (#53)
     ready: {
-      count: readyIds.length,
-      total: inGame.filter((p) => !p.leftAt).length,
+      count: readyIds.filter((id) => readyMembers.has(id)).length,
+      total: readyMembers.size,
       mine: readyIds.includes(myPlayerId),
     },
     // 공용 단서만. revealed_clues 에는 공용 단서만 들어가지만, 한 번 더 걸러 개인 단서가 새지 않게 한다
