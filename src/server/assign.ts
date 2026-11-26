@@ -36,6 +36,18 @@ export function culpritCandidates(scenario: Scenario, n: PlayerCount) {
   return scenario.culprits.filter((c) => core.has(c.character) && !blocked.has(c.character));
 }
 
+/**
+ * 다시 하기 때 지난 판 범인은 고르지 않는다. 다른 후보가 없으면 그대로 둔다.
+ * spec §5-2 "지난 판 범인(같은 무리 연속이면 피하기 `제안`)" 을 따른다 (#47)
+ */
+export function avoidPrevious<T extends { character: string }>(
+  candidates: T[],
+  previous: string | null,
+): T[] {
+  const rest = candidates.filter((c) => c.character !== previous);
+  return rest.length > 0 ? rest : candidates;
+}
+
 // 규칙 배정 -------------------------------------------------------------------
 
 /** 규칙만으로 무작위 배정 (BR-002~006). AI 가 실패하거나 느릴 때도 쓴다 (NFR-003) */
@@ -43,11 +55,12 @@ export function assignByRule(
   scenario: Scenario,
   players: SeatedPlayer[],
   random: () => number,
+  previousCulprit: string | null = null,
 ): Plan {
   const n = players.length as PlayerCount;
   // 등장인물: 핵심 4 + (n≥5 인플) + (n=6 의료) (BR-002)
   const characters = charactersFor(scenario, n);
-  const candidates = culpritCandidates(scenario, n);
+  const candidates = avoidPrevious(culpritCandidates(scenario, n), previousCulprit);
   if (candidates.length === 0) throw new Error(`인원 ${n}명에서 고를 수 있는 범인이 없어요`);
   const culprit = pick(candidates, random).character;
 

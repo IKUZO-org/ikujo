@@ -25,6 +25,8 @@ export const MSG = {
   started: "이미 시작한 방이에요",
   notMember: "이 방 참가자가 아니에요",
   notHost: "방장만 시작할 수 있어요",
+  hostOnly: "방장만 할 수 있어요",
+  notReveal: "해설 화면에서 할 수 있어요",
   tooFew: `${MIN_PLAYERS}명부터 시작해요`,
   retry: "잠시 뒤 다시 시도해 주세요",
 } as const;
@@ -197,38 +199,119 @@ export async function startGame(
   }
 
   try {
-    // 배정 (spec §5): AI 1번 → 검사 실패면 1번 더 → 실패 또는 15초 초과면 규칙 배정 (NFR-003)
-    const { assignment, source } = await chooseAssignment({
-      scenario: deps.scenario,
-      players: players.map((p) => ({ id: p.id, seat: p.seat })),
-      model: deps.assignModel,
-      random: deps.random,
-      timeoutMs: deps.assignTimeoutMs,
-    });
-    // 타이머는 배정이 끝난 뒤부터 (AI 가 오래 걸려도 intro 3분을 다 쓴다)
-    const endsAt = new Date(deps.now().getTime() + INTRO_MS).toISOString();
-    const game = await store.createGame({
-      roomId: room.id,
-      playerCount: players.length,
-      phase: "intro",
-      phaseEndsAt: endsAt,
-      assignmentSource: source,
-      ...assignment,
-    });
-    await store.logEvent("game_started", {
-      roomId: room.id,
-      gameId: game.id,
-      players: players.length,
-      assignmentSource: source,
-    });
-    // 신호에는 단계만. 범인, 배정은 넣지 않는다 (data §5)
-    await deps.broadcast(room.id, { type: "phase", phase: game.phase, endsAt: game.phaseEndsAt });
-    return { ok: true, gameId: game.id };
+    return await beginGame(deps, room.id, players, null);
   } catch (e) {
     // 판을 못 만들었으면 대기실로 되돌려 다시 시작할 수 있게
     await store.updateRoomStatus(room.id, "playing", "lobby");
     throw e;
   }
+}
+
+// 배정하고 판을 intro 로 만든다. startGame, replay 가 같이 쓴다
+async function beginGame(
+  deps: Deps,
+  roomId: string,
+  players: PlayerRow[],
+  previousCulprit: string | null,
+): Promise<Result<{ gameId: string }>> {
+  const { store } = deps;
+  // 배정 (spec §5): AI 1번 → 검사 실패면 1번 더 → 실패 또는 15초 초과면 규칙 배정 (NFR-003)
+  const { assignment, source } = await chooseAssignment({
+    scenario: deps.scenario,
+    players: players.map((p) => ({ id: p.id, seat: p.seat })),
+    model: deps.assignModel,
+    random: deps.random,
+    timeoutMs: deps.assignTimeoutMs,
+    previousCulprit,
+  });
+  // 타이머는 배정이 끝난 뒤부터 (AI 가 오래 걸려도 intro 3분을 다 쓴다)
+  const endsAt = new Date(deps.now().getTime() + INTRO_MS).toISOString();
+  const game = await store.createGame({
+    roomId,
+    playerCount: players.length,
+    phase: "intro",
+    phaseEndsAt: endsAt,
+    assignmentSource: source,
+    ...assignment,
+  });
+  await store.logEvent("game_started", {
+    roomId,
+    gameId: game.id,
+    players: players.length,
+    assignmentSource: source,
+  });
+  // 신호에는 단계만. 범인, 배정은 넣지 않는다 (data §5)
+  await deps.broadcast(roomId, { type: "phase", phase: game.phase, endsAt: game.phaseEndsAt });
+  return { ok: true, gameId: game.id };
+}
+
+// replay, endGame (S-12 카드 10) -----------------------------------------------------
+
+/** 방장 확인과 해설 중인 판. 다시 하기, 끝내기가 같이 쓴다 */
+async function hostAtReveal(deps: Deps, input: { roomId: string }) {
+  const roomId = roomIdSchema.safeParse(input.roomId);
+  if (!roomId.success) return fail(MSG.notFound);
+  const room = await deps.store.getRoom(roomId.data);
+  if (!room || room.status !== "playing") return fail(MSG.notFound);
+  const players = await deps.store.listPlayers(room.id);
+  const me = players.find((p) => p.userId === deps.user.id && !p.leftAt);
+  if (!me) return fail(MSG.notMember);
+  if (room.hostPlayerId !== me.id) return fail(MSG.hostOnly);
+  const game = await deps.store.latestGame(room.id);
+  if (!game || game.phase !== "reveal") return fail(MSG.notReveal);
+  return { room, players, game };
+}
+
+/**
+ * spec §4 replay: 방장만, reveal 에서. 같은 방, 새 판, 새 배정 (FR-070).
+ * 들어갈 사람은 누른 순간 접속한 사람 (D-023, PRD 5판). 4명 미만이면 막는다 (AC-070-2).
+ * 지난 판 범인은 배정 입력으로 넘겨 연속으로 고르지 않는다 (spec §5-2 `제안`).
+ * FR-090 완료 기록은 하지 않는다 (D-018)
+ */
+export async function replay(
+  deps: Deps,
+  input: { roomId: string },
+): Promise<Result<{ gameId: string }>> {
+  const found = await hostAtReveal(deps, input);
+  if ("error" in found) return found;
+  const { room, players, game } = found;
+  const staying = players.filter((p) => !p.leftAt);
+  if (staying.length < MIN_PLAYERS) return fail(MSG.tooFew);
+
+  // 지난 판 범인은 나간 사람을 지우기 전에 읽는다 (지우면 game_secrets 가 같이 지워질 수 있다)
+  const previousCulprit = await deps.store.getCulpritCharacter(game.id);
+  // reveal → ended 를 먼저 바꿔 두 번 눌러도 새 판은 하나만
+  if (!(await deps.store.updateGamePhase(game.id, "reveal", "ended"))) return fail(MSG.notReveal);
+  // 끝까지 안 돌아온 사람은 방에서 뺀다 (D-023). 남겨 두면 새 판의 투표 후보(D-021)와 준비 인원에 섞인다
+  for (const p of players.filter((x) => x.leftAt)) await deps.store.deletePlayer(p.id);
+
+  try {
+    const r = await beginGame(deps, room.id, staying, previousCulprit);
+    await deps.store.logEvent("replay", {
+      roomId: room.id,
+      gameId: game.id,
+      players: staying.length,
+    });
+    return r;
+  } catch (e) {
+    // 새 판을 못 만들었으면 해설로 되돌려 다시 누를 수 있게
+    await deps.store.updateGamePhase(game.id, "ended", "reveal");
+    throw e;
+  }
+}
+
+/**
+ * 끝내기 `제안` (#47): 방장만, reveal 에서. 판과 방을 끝낸다 (spec §1.1 "방장이 '끝내기'").
+ * "홈으로"는 각자 leaveRoom 으로 방을 떠나는 것이라 판에는 영향이 없다
+ */
+export async function endGame(deps: Deps, input: { roomId: string }): Promise<Result<object>> {
+  const found = await hostAtReveal(deps, input);
+  if ("error" in found) return found;
+  const { room, game } = found;
+  if (!(await deps.store.updateGamePhase(game.id, "reveal", "ended"))) return fail(MSG.notReveal);
+  await deps.store.updateRoomStatus(room.id, "playing", "ended");
+  await deps.broadcast(room.id, { type: "phase", phase: "ended", endsAt: null });
+  return { ok: true };
 }
 
 // getRoomState (공용 읽기) ---------------------------------------------------------

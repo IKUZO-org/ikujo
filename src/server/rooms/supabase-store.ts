@@ -343,6 +343,27 @@ export function supabaseRoomStore(db: Db): RoomStore {
       return data?.ghost_trait ?? null;
     },
 
+    async getCulpritCharacter(gameId) {
+      const { data, error } = await db
+        .from("game_secrets")
+        .select("culprit_character")
+        .eq("game_id", gameId)
+        .maybeSingle<{ culprit_character: string }>();
+      check(error);
+      return data?.culprit_character ?? null;
+    },
+
+    async updateGamePhase(gameId, from, to) {
+      const { data, error } = await db
+        .from("games")
+        .update({ phase: to, phase_started_at: new Date().toISOString(), phase_ends_at: null })
+        .eq("id", gameId)
+        .eq("phase", from)
+        .select("id");
+      check(error);
+      return (data ?? []).length > 0;
+    },
+
     async listGhostActions(gameId) {
       const { data, error } = await db
         .from("ghost_actions")

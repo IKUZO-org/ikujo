@@ -10,6 +10,7 @@ import {
   leaveRoom,
   MSG,
   nextHost,
+  replay,
   startGame,
   uniqueNickname,
   type Deps,
@@ -318,5 +319,34 @@ describe("uniqueNickname", () => {
   it("이름, 이름2, 이름3 순서", () => {
     expect(uniqueNickname("a", [])).toBe("a");
     expect(uniqueNickname("a", [{ nickname: "a" }, { nickname: "a2" }])).toBe("a3");
+  });
+});
+
+describe("replay", () => {
+  async function atReveal(count: number) {
+    const host = await roomWith(count);
+    const r = await startGame(phone("u1"), { roomId: host.roomId });
+    if (!("ok" in r)) throw new Error(r.error);
+    store.games.at(-1)!.phase = "reveal";
+    return host;
+  }
+
+  it("누른 순간 접속한 사람으로 새 판, 나간 사람은 빠진다 (D-023)", async () => {
+    const host = await atReveal(5);
+    await leaveRoom(phone("u5"), { roomId: host.roomId });
+    const r = await replay(phone("u1"), { roomId: host.roomId });
+    expect(r).toMatchObject({ ok: true });
+    expect(store.games).toHaveLength(2);
+    expect(store.games[0].phase).toBe("ended");
+    expect(store.games[1]).toMatchObject({ phase: "intro" });
+    expect(store.games[1].game.assignments).toHaveLength(4);
+    expect(store.players.map((p) => p.userId)).not.toContain("u5");
+  });
+
+  it("접속한 사람이 4명 미만이면 막는다 (AC-070-2)", async () => {
+    const host = await atReveal(4);
+    await leaveRoom(phone("u4"), { roomId: host.roomId });
+    expect(await replay(phone("u1"), { roomId: host.roomId })).toEqual({ error: MSG.tooFew });
+    expect(store.games).toHaveLength(1);
   });
 });

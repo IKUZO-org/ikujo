@@ -3,6 +3,7 @@
 import { charactersFor, type PlayerCount } from "@/lib/scenario/check";
 import {
   assignByRule,
+  avoidPrevious,
   culpritCandidates,
   planSchema,
   toAssignment,
@@ -83,15 +84,21 @@ export async function chooseAssignment(opts: {
   model: AssignModel | null;
   random: () => number;
   timeoutMs?: number;
+  /** 다시 하기의 지난 판 범인 인물 ID. 이번 판 범인 후보에서 뺀다 (spec §5-2) */
+  previousCulprit?: string | null;
 }): Promise<Chosen> {
-  const { scenario, players, model, random, timeoutMs = 15_000 } = opts;
+  const { scenario, players, model, random, timeoutMs = 15_000, previousCulprit = null } = opts;
   const rule = (): Chosen => ({
-    assignment: toAssignment(scenario, players, assignByRule(scenario, players, random)),
+    assignment: toAssignment(
+      scenario,
+      players,
+      assignByRule(scenario, players, random, previousCulprit),
+    ),
     source: "rule",
   });
   if (!model) return rule();
 
-  const candidates = culpritIds(scenario, players);
+  const candidates = culpritIds(scenario, players, previousCulprit);
   const controller = new AbortController();
   const attempts: { raw: string | null; errors: string[] }[] = [];
 
@@ -129,8 +136,15 @@ export async function chooseAssignment(opts: {
 }
 
 // 규칙 배정, 검사와 같은 범인 후보 (BR-003, BR-006, OQ-013)
-function culpritIds(scenario: Scenario, players: SeatedPlayer[]): string[] {
-  return culpritCandidates(scenario, players.length as PlayerCount).map((c) => c.character);
+function culpritIds(
+  scenario: Scenario,
+  players: SeatedPlayer[],
+  previousCulprit: string | null,
+): string[] {
+  return avoidPrevious(
+    culpritCandidates(scenario, players.length as PlayerCount),
+    previousCulprit,
+  ).map((c) => c.character);
 }
 
 /** ```json ... ``` 으로 감싸 오면 벗긴다 */
