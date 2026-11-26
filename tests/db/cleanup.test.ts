@@ -1,19 +1,26 @@
 // 하루 한 번 정리 작업 (009_cleanup.sql, data §6, D-019, D-026, D-027). 로컬 Supabase 필요
 // 함수는 앱 역할이 부를 수 없어 postgres 로 부른다. 시각은 이 테스트가 만든 줄만 과거로 바꾼다.
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { guest, insert, serviceClient } from "./local-supabase";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { guest, insert, localEnv, serviceClient } from "./local-supabase";
 
 type Row = Record<string, unknown> & { id: string };
 
-// config.jsonc 의 project_id 가 ikujo
+// supabase CLI 의 DB 컨테이너 이름은 supabase_db_<project_id>. SUPABASE_DB_CONTAINER 로 덮을 수 있다
+function dbContainer(): string {
+  if (process.env.SUPABASE_DB_CONTAINER) return process.env.SUPABASE_DB_CONTAINER;
+  const config = readFileSync("supabase/config.jsonc", "utf8");
+  const id = config.match(/^\s*"project_id":\s*"([^"]+)"/m)?.[1];
+  if (!id) throw new Error("supabase/config.jsonc 에서 project_id 를 찾지 못했어요.");
+  return `supabase_db_${id}`;
+}
+
 function psql(query: string): string {
-  return execFileSync(
-    "docker",
-    ["exec", "supabase_db_ikujo", "psql", "-U", "postgres", "-Atc", query],
-    { encoding: "utf8" },
-  ).trim();
+  return execFileSync("docker", ["exec", dbContainer(), "psql", "-U", "postgres", "-Atc", query], {
+    encoding: "utf8",
+  }).trim();
 }
 
 const ago = (hours: number) => new Date(Date.now() - hours * 3600_000).toISOString();
@@ -90,6 +97,12 @@ beforeAll(async () => {
   await set("rooms", c.room.id, { created_at: ago(2 * DAY) });
   await set("games", cg.id, { phase_started_at: ago(25) });
 
+  // 판이 한 번도 없는 대기 중인 방, 25시간 전
+  [s.lobby] = await insert<Row>(db, "rooms", {
+    code: String(Math.floor(100000 + Math.random() * 900000)),
+  });
+  await set("rooms", s.lobby.id, { created_at: ago(25) });
+
   // (d)(e) 31일 전 끝난 방: 사용자 4(여기만), 5(최근 방에도 있음). 29일 전 끝난 방: 사용자 6
   const d31 = await room("ended", [ids[4], ids[5]]);
   s.d31room = d31.room;
@@ -120,13 +133,29 @@ beforeAll(async () => {
   s.d29room = d29.room;
   await set("rooms", d29.room.id, { ended_at: ago(29 * DAY) });
 
+  // 익명이 아닌 사용자 (방 없음)
+  const { data: named, error } = await db.auth.admin.createUser({
+    email: `cleanup-${crypto.randomUUID()}@example.test`,
+    email_confirm: true,
+  });
+  if (error || !named.user) throw new Error(`사용자 만들기 실패: ${error?.message}`);
+
   // 모든 사용자를 31일 전에 만든 것으로. 사용자 7 은 방에 들어간 적 없음
   psql(
-    `update auth.users set created_at = now() - interval '31 days' where id in (${ids
+    `update auth.users set created_at = now() - interval '31 days' where id in (${[
+      ...ids,
+      named.user.id,
+    ]
       .map((id) => `'${id}'`)
       .join(",")})`,
   );
-  Object.assign(u, { only: ids[4], shared: ids[5], recent: ids[6], none: ids[7] });
+  Object.assign(u, {
+    only: ids[4],
+    shared: ids[5],
+    recent: ids[6],
+    none: ids[7],
+    named: named.user.id,
+  });
 
   psql("select public.cleanup_stale_and_old()");
 });
@@ -148,6 +177,12 @@ describe("24시간 활동 없는 방과 판 (D-027)", () => {
 
   it("진행 중 판 없이 playing 인 방도 끝낸다", async () => {
     expect(await get("rooms", s.croom.id)).toMatchObject({ status: "ended" });
+  });
+
+  it("판이 없는 대기 중인 방은 created_at 25시간이면 끝낸다", async () => {
+    const r = await get("rooms", s.lobby.id);
+    expect(r).toMatchObject({ status: "ended" });
+    expect(r?.ended_at).not.toBeNull();
   });
 });
 
@@ -172,18 +207,22 @@ describe("30일 지난 방과 익명 사용자 삭제 (D-019, D-026)", () => {
     expect(await get("rooms", s.d29room.id)).not.toBeNull();
   });
 
-  it("다른 방에 남은 사용자만 두고 지운다", () => {
+  it("다른 방에 남은 사용자와 익명이 아닌 사용자는 두고 지운다", async () => {
     expect(userExists(u.only)).toBe(false);
     expect(userExists(u.none)).toBe(false);
     expect(userExists(u.shared)).toBe(true);
     expect(userExists(u.recent)).toBe(true);
+    expect(userExists(u.named)).toBe(true);
+    await db.auth.admin.deleteUser(u.named);
   });
 });
 
 describe("권한과 예약", () => {
   it("anon, authenticated, service_role 은 부를 수 없다", async () => {
-    const anon = await guest();
-    for (const client of [anon.client, db]) {
+    const { url, anonKey } = localEnv();
+    const anon = createClient(url, anonKey, { auth: { persistSession: false } });
+    const signedIn = (await guest()).client; // 익명 로그인 세션은 authenticated 역할
+    for (const client of [anon, signedIn, db]) {
       const { error } = await client.rpc("cleanup_stale_and_old");
       expect(error?.code).toBe("42501");
     }

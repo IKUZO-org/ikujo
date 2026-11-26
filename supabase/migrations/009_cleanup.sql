@@ -36,7 +36,7 @@ begin
   where r.id = stale.id;
 
   -- (2) 끝난 지 30일 지난 방을 지운다 (D-019). 판, 참가자와 딸린 표는 cascade.
-  -- ghost_actions.body 를 판이 끝날 때 지우는 것(data §2 `제안`)은 하지 않고 여기서 같이 지운다 (#74, PO 확인 중)
+  -- ghost_actions.body 를 판이 끝날 때 지우는 것(data §2 `제안`)은 하지 않고 여기서 같이 지운다 (#74)
   delete from public.rooms r
   where r.status = 'ended' and r.ended_at < v_now - interval '30 days';
 
