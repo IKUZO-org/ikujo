@@ -30,6 +30,7 @@ export function GameVideo({
   gameId,
   isHost = false,
   onEnded,
+  onTime,
 }: {
   id: VideoId;
   gameId: string;
@@ -37,6 +38,8 @@ export function GameVideo({
   isHost?: boolean;
   /** 끝까지 봤거나("ended"), 못 틀어서 건너뛰었을 때("skipped") 한 번. 이미 본 영상이면 부르지 않는다 */
   onEnded?: (how: "ended" | "skipped") => void;
+  /** 재생 중 시각(초)이 바뀔 때마다 (timeupdate). 영상 안 장면에 맞춰 소리를 낼 때 쓴다 */
+  onTime?: (seconds: number) => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const key = playedKey(gameId, id);
@@ -51,8 +54,10 @@ export function GameVideo({
   const wantSound = videoHasSound(id, { isHost, soundOn }) && !blocked;
 
   const ended = useRef(onEnded);
+  const time = useRef(onTime);
   useEffect(() => {
     ended.current = onEnded;
+    time.current = onTime;
   });
 
   // 처음 한 번 튼다. 움직임 줄이기면 못 튼 것으로 알린다. 이미 본 영상은 뒤에 이어지는 소리도 이미 났으니 알리지 않는다
@@ -119,6 +124,7 @@ export function GameVideo({
         playsInline
         preload="auto"
         disablePictureInPicture
+        onTimeUpdate={(e) => time.current?.(e.currentTarget.currentTime)}
         onEnded={finish}
         onError={fail}
         className="absolute inset-0 size-full bg-(--color-bg) object-contain"

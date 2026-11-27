@@ -18,6 +18,8 @@ import type { RoomState } from "@/server/rooms/core";
 import type { VideoId } from "@/lib/video";
 
 const MIN_PLAYERS = 4;
+// V-07 막대 화면이 켜지는 영상 재생 시각(초). 이때 RV-02 를 낸다 (video/PLAN.md VQ-17 `제안`: 영상은 이 자리에 소리를 비워 둠)
+const RV02_AT_S = 4.25;
 
 type Loaded = { body: RevealBody; personal: string | null };
 
@@ -38,6 +40,7 @@ export function Reveal({
   const [index, setIndex] = useState(0);
   const [pending, startTransition] = useTransition();
   const seq = useRef(0);
+  const stung = useRef(false); // 엔딩 소리를 이 화면에서 이미 냈는가
 
   // 방 상태를 다시 읽을 때마다(신호 "reveal" 포함) 같이 다시 읽는다: 카드 8이 뒤늦게 채워진다
   useEffect(() => {
@@ -143,10 +146,16 @@ export function Reveal({
 
   const card = cards[at];
   const isHost = state.me.isHost;
-  // 엔딩 소리 RV-01 검거 성공 / RV-02 방송 중단 (방장 폰). 카드 1 의 엔딩 영상 V-06/V-07 이 끝난 뒤(못 틀면 바로) 한 번 낸다:
-  // 영상 소리와 겹치지 않게 차례로 (PLAN.md §1, RULES R-13). 이미 본 영상이면(새로 고침) 소리도 이미 났으니 내지 않는다
-  const endingSting = () =>
-    playSound(data.body.ending.outcome === "caught" ? "rv-01" : "rv-02", { isHost });
+  // 엔딩 소리 (방장 폰, 한 번). 영상 소리와 겹치지 않게 (PLAN.md §1, RULES R-13):
+  // - RV-01 검거 성공: V-06 이 끝난 뒤
+  // - RV-02 방송 중단: V-07 재생 시각 RV02_AT_S 에 (VQ-17 `제안`). 영상을 늦게 불러와도 맞게 currentTime 으로 본다
+  // 못 틀면 바로 낸다. 그 전에 카드를 넘기거나 이미 본 영상이면(새로 고침) 내지 않는다
+  const caught = data.body.ending.outcome === "caught";
+  const endingSting = () => {
+    if (stung.current) return;
+    stung.current = true;
+    playSound(caught ? "rv-01" : "rv-02", { isHost });
+  };
   return (
     <GameScreen
       top={top}
@@ -157,7 +166,8 @@ export function Reveal({
             id={card.video}
             gameId={gameId}
             isHost={isHost}
-            onEnded={at === 0 ? endingSting : undefined}
+            onEnded={at === 0 ? (how) => (caught || how === "skipped") && endingSting() : undefined}
+            onTime={at === 0 && !caught ? (t) => t >= RV02_AT_S && endingSting() : undefined}
           />
         )
       }
