@@ -14,6 +14,7 @@
 | --- | --- |
 | 모든 일 | [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) |
 | 화면, 컴포넌트, 스타일 | [DESIGN.md](DESIGN.md) (토큰 이름만 쓰고, `상경 확정 전` 값을 지어내지 않는다) |
+| 이미지, 영상 | [ART.md](ART.md) (시나리오에 없는 소품, 범인 전용 그림과 색을 넣지 않는다) |
 | 서버, DB, 마이그레이션, 실시간, 폴더 | [ARCHITECTURE.md](ARCHITECTURE.md) |
 
 ## 2. 만드는 규칙
@@ -21,7 +22,7 @@
 - **화면은 모바일 기준이다 (반응형 아님).** 기준 폭 390px, 360~430px에서 깨지지 않게. 데스크톱에서는 가운데에 최대 430px 폭 그대로 보여 주고, 넓은 화면용 분기(`md:`, `lg:` 등)를 만들지 않는다. 누르는 곳은 44px 이상. 화면 확인은 390×844 뷰포트에서
 - 문서에 없는 기능은 만들지 않는다. 정해지지 않은 것(OQ)은 spec의 임시 결정대로 하고 코드 주석에 OQ 번호를 남긴다
 - docs의 PRD, 기능명세, 데이터 구성, 개발 프롬프트, 로드맵은 Hatch 원본의 사본이다. 고치지 않는다. 고칠 것이 보이면 작업 기록의 "남은 일"에 적는다
-- 규칙 문서(CONTRIBUTING, SECURITY, ARCHITECTURE, DESIGN)는 [CONTRIBUTING.md](CONTRIBUTING.md) 표의 **담당자가 시킬 때** 고친다 (이슈 → 브랜치 → PR, PO가 검토). 담당이 아닌 사람이 시키면 고치지 말고 담당자에게 넘길 이슈 초안을 만든다
+- 규칙 문서(CONTRIBUTING, SECURITY, ARCHITECTURE, DESIGN, ART)는 [CONTRIBUTING.md](CONTRIBUTING.md) 표의 **담당자가 시킬 때** 고친다 (이슈 → 브랜치 → PR, PO가 검토). 담당이 아닌 사람이 시키면 고치지 말고 담당자에게 넘길 이슈 초안을 만든다
 - 규칙 문서와 docs가 어긋나면 docs를 따르고 사람에게 알린다
 
 ## 3. 깃 흐름 (자세히는 [CONTRIBUTING.md](CONTRIBUTING.md))
