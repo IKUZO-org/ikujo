@@ -28,27 +28,36 @@ const projects = join(config, "projects");
 
 const files = [];
 if (existsSync(projects)) {
-  const slugs = roots.map(slugOf);
+  // Windows 드라이브 글자는 대소문자가 섞일 수 있어 폴더 이름은 소문자로 맞춰 본다 (이슈 #41)
+  const slugs = roots.map((r) => slugOf(r).toLowerCase());
   for (const dir of readdirSync(projects)) {
-    if (!slugs.some((s) => dir === s || dir.startsWith(`${s}-`))) continue;
+    const d = dir.toLowerCase();
+    if (!slugs.some((s) => d === s || d.startsWith(`${s}-`))) continue;
     const base = join(projects, dir);
     for (const f of readdirSync(base, { withFileTypes: true })) {
       if (f.isFile() && f.name.endsWith(".jsonl")) files.push(join(base, f.name));
       // 서브에이전트 기록: <세션>/subagents/*.jsonl
       const sub = join(base, f.name, "subagents");
-      if (f.isDirectory() && existsSync(sub)) for (const g of readdirSync(sub)) if (g.endsWith(".jsonl")) files.push(join(sub, g));
+      if (f.isDirectory() && existsSync(sub))
+        for (const g of readdirSync(sub)) if (g.endsWith(".jsonl")) files.push(join(sub, g));
     }
   }
 }
 const lines = files.flatMap((f) => readFileSync(f, "utf8").split("\n"));
 const s = summarize(lines, { branch, roots });
 const rateLog = join(config, "ikujo-usage", "rate.jsonl");
-s.rate = existsSync(rateLog) ? rateRange(readFileSync(rateLog, "utf8").split("\n"), s.sessionIds) : null;
+s.rate = existsSync(rateLog)
+  ? rateRange(readFileSync(rateLog, "utf8").split("\n"), s.sessionIds)
+  : null;
 
 if (args.includes("--json")) console.log(JSON.stringify(s, null, 2));
 else if (args.includes("--md")) process.stdout.write(toMarkdown(s));
 else {
-  console.log(`브랜치 ${branch}: 세션 ${s.sessions}개, 메시지 ${s.messages}개, 비용 ${usd(s.costUSD)}`);
-  console.log(`토큰 입력 ${s.tokens.input}, 출력 ${s.tokens.output}, 캐시 쓰기 ${s.tokens.cacheWrite}, 캐시 읽기 ${s.tokens.cacheRead}`);
+  console.log(
+    `브랜치 ${branch}: 세션 ${s.sessions}개, 메시지 ${s.messages}개, 비용 ${usd(s.costUSD)}`,
+  );
+  console.log(
+    `토큰 입력 ${s.tokens.input}, 출력 ${s.tokens.output}, 캐시 쓰기 ${s.tokens.cacheWrite}, 캐시 읽기 ${s.tokens.cacheRead}`,
+  );
   if (!s.messages) console.log("이 브랜치에서 이 레포 폴더로 쓴 Claude Code 기록이 없어요.");
 }
