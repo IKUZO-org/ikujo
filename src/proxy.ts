@@ -36,8 +36,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // 정적 파일과 이미지는 건너뛴다
+  // 정적 파일과 이미지, 소리, 영상은 건너뛴다
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|mp4|webm)$).*)",
   ],
 };
