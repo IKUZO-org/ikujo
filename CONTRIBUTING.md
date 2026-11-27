@@ -9,6 +9,7 @@
 | [SECURITY.md](SECURITY.md) | 모든 일. 키, 환경 변수, 권한, 비밀 정보를 다룰 때는 반드시 | 정연 (Supabase, Vercel) |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 서버, DB, 실시간, 폴더 구조를 만들거나 바꿀 때 | 정연, 현경 |
 | [DESIGN.md](DESIGN.md) | 화면, 컴포넌트, 스타일을 만들거나 바꿀 때 | 상경 (UI) |
+| [ART.md](ART.md) | 이미지, 영상(그래픽)을 만들거나 화면에 넣을 때 | 상경 (아트 디렉션). 영상은 지영과 같이 |
 | [docs/prd.md](docs/prd.md), [spec.md](docs/spec.md), [data.md](docs/data.md), [dev-prompt.md](docs/dev-prompt.md) | 무엇을 만들지. 번호(FR, BR, AC, S-)의 근거 | 원본은 팀 Hatch. 여기는 사본이라 고치지 않는다 |
 
 - **규칙 문서는 담당자가 직접 고친다.** 다른 일과 같이 이슈 → 브랜치 → PR로 올리고, PO가 PR에서 검토한다
@@ -68,7 +69,7 @@
   - `issue`: 본문의 `Closes #N` 이 열린 이슈를 가리킨다
   - `worklog`: PR 올린 사람 폴더에 작업 기록이 있고 필수 칸이 있다
   - `secrets`: 이 PR 커밋에 비밀 값이 없다
-- 리뷰: 다른 사람 1명 승인. 리뷰어는 문서 번호대로 동작하는지, [SECURITY.md](SECURITY.md) 체크, 화면이면 [DESIGN.md](DESIGN.md) 체크를 본다
+- 리뷰: 다른 사람 1명 승인. 리뷰어는 문서 번호대로 동작하는지, [SECURITY.md](SECURITY.md) 체크, 화면이면 [DESIGN.md](DESIGN.md) 체크, 이미지와 영상이면 [ART.md](ART.md) §13 체크를 본다
 - 리뷰 대화가 모두 해결돼야 머지된다
 
 ## 머지
