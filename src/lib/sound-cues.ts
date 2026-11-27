@@ -82,6 +82,7 @@ export const TRANSITION_CUES: Partial<Record<`${Phase}>${Phase}`, Cue[]>> = {
     { id: "r3-01", atMs: 2000 }, // 2초
   ],
   "r3>vote": [{ id: "rd-05", atMs: 0 }],
+  "vote>revote": [{ id: "vt-03", atMs: 0 }], // 동점 재투표 경고 스팅 (sound.md VT-03)
 };
 
 // RD-04 째깍을 시작하는 라운드 남은 시간 (sound.md RD-04)

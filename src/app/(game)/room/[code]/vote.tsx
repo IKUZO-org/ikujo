@@ -8,6 +8,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { GameScreen } from "@/components/game";
 import { ErrorLine } from "@/components/Screen";
+import { playSound } from "@/lib/sound";
 import { vote } from "@/server/actions/vote";
 import type { GameState, RoomState, VoteState } from "@/server/rooms/core";
 
@@ -43,6 +44,7 @@ export function Vote({
     startTransition(async () => {
       const r = await vote(game.id, picked);
       if ("error" in r) setError(r.error);
+      else playSound("vt-02", { isHost: false }); // 내 표 보냄. 이 폰만 (sound.md VT-02)
       await reload();
     });
   }
