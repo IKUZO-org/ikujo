@@ -1,6 +1,6 @@
 // 하루 한 번 정리 작업 (009_cleanup.sql, data §6, D-019, D-026, D-027). 로컬 Supabase 필요
 // 함수는 앱 역할이 부를 수 없어 postgres 로 부른다. 시각은 이 테스트가 만든 줄만 과거로 바꾼다.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -22,6 +22,26 @@ function psql(query: string): string {
     encoding: "utf8",
   }).trim();
 }
+
+// 두 번째 연결에서 트랜잭션을 연다. 끝나면 resolve
+function holdTx(sql: string): Promise<void> {
+  const p = spawn("docker", [
+    "exec",
+    "-i",
+    dbContainer(),
+    "psql",
+    "-U",
+    "postgres",
+    "-v",
+    "ON_ERROR_STOP=1",
+  ]);
+  p.stdin.end(sql);
+  return new Promise((resolve, reject) =>
+    p.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`psql 종료 ${code}`)))),
+  );
+}
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const ago = (hours: number) => new Date(Date.now() - hours * 3600_000).toISOString();
 const DAY = 24;
@@ -230,5 +250,42 @@ describe("권한과 예약", () => {
 
   it("cron 에 job 하나", () => {
     expect(psql("select count(*) from cron.job where jobname = 'ikujo-cleanup'")).toBe("1");
+  });
+});
+
+// 정리 도중 다른 요청이 판을 넘기거나 방을 잡고 있는 경우 (PR #77 리뷰, #74)
+describe("동시에 들어온 요청", () => {
+  async function staleRoom(): Promise<{ room: Row; game: Row }> {
+    const r = await room("playing", [(await guest()).userId]);
+    const g = await game(r.room.id, { phase: "r2" });
+    await set("rooms", r.room.id, { created_at: ago(3 * DAY) });
+    await set("games", g.id, { phase_started_at: ago(25) });
+    return { room: r.room, game: g };
+  }
+
+  it("정리가 판 잠금을 기다리는 사이 판이 다음 단계로 넘어가면 판도 방도 끝내지 않는다", async () => {
+    const { room: r, game: g } = await staleRoom();
+    const tx = holdTx(
+      `begin; update public.games set phase = 'r3', phase_started_at = now() where id = '${g.id}'; select pg_sleep(2); commit;`,
+    );
+    await wait(300);
+    psql("select public.cleanup_stale_and_old()");
+    await tx;
+    expect(await get("games", g.id)).toMatchObject({ phase: "r3", ended_at: null });
+    expect(await get("rooms", r.id)).toMatchObject({ status: "playing", ended_at: null });
+  });
+
+  it("다른 요청이 잡고 있는 방은 기다리지 않고 건너뛴다", async () => {
+    const { room: r, game: g } = await staleRoom();
+    const tx = holdTx(
+      `begin; select id from public.rooms where id = '${r.id}' for update; select pg_sleep(3); commit;`,
+    );
+    await wait(300);
+    const start = Date.now();
+    psql("select public.cleanup_stale_and_old()");
+    expect(Date.now() - start).toBeLessThan(1500);
+    expect(await get("rooms", r.id)).toMatchObject({ status: "playing" });
+    expect(await get("games", g.id)).toMatchObject({ phase: "r2" });
+    await tx;
   });
 });
