@@ -29,8 +29,16 @@ export function isOn(name: Toggle): boolean {
   return read(KEYS[name]) !== "off";
 }
 
+/** 설정이 바뀌면 이 폰 안에 알린다. 소리를 끄는 순간 깔린 BGM 을 멈추는 데 쓴다 (src/lib/sound.ts) */
+export const SETTINGS_EVENT = "last-one:settings";
+
 export function setOn(name: Toggle, on: boolean) {
   write(KEYS[name], on ? "on" : "off");
+  try {
+    window.dispatchEvent(new Event(SETTINGS_EVENT));
+  } catch {
+    // window 가 없는 곳(테스트 등)
+  }
 }
 
 export function hasSeenOnboarding(): boolean {
