@@ -72,10 +72,8 @@ export function Opening({
     });
   }
 
-  // 소리 자리 (sound.md 1.1). playSound(#99)가 머지되면 GameVideo 의 onEnded 로 붙인다:
-  // - V-01 이 나오는 동안 OP-05(정전), OP-06(폭풍, 파도)은 내지 않는다. 영상 안 소리를 쓴다
-  // - 영상이 끝나면("ended") OP-08(긴장 스팅) → OP-04(메신저 알림음). OP-02(BGM)는 onVideoEnded 뒤 useRoomSound 가 깐다
-  // - 영상을 못 틀면("skipped") op-05.mp3 를 대신 쓴다
+  // 소리 자리 (sound.md 1.1): 영상이 끝나면 OP-08 → OP-04, 못 틀면 op-05. V-01 중에는 OP-05, OP-06 을 내지 않는다.
+  // OP-02 는 onVideoEnded 뒤 useRoomSound 가 깐다
   return (
     <GameScreen
       top={top}
