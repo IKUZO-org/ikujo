@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useTransition, type ReactNode } from "reac
 import { Button } from "@/components/Button";
 import { Card, GameScreen } from "@/components/game";
 import { ErrorLine } from "@/components/Screen";
+import { playSound } from "@/lib/sound";
 import { leaveRoom } from "@/server/actions/leave-room";
 import { endRoom } from "@/server/actions/end-room";
 import { getReveal } from "@/server/actions/get-reveal";
@@ -47,6 +48,16 @@ export function Reveal({
     });
   }, [gameId, state]);
 
+  // 엔딩 소리: 카드 1 이 처음 보일 때 한 번. 검거 성공 RV-01, 방송 중단 RV-02 (sound.md, 방장 폰)
+  const outcome = data?.body.ending.outcome ?? null;
+  const isHost = state.me.isHost;
+  const endingPlayed = useRef(false);
+  useEffect(() => {
+    if (!outcome || index !== 0 || endingPlayed.current) return;
+    endingPlayed.current = true;
+    playSound(outcome === "caught" ? "rv-01" : "rv-02", { isHost });
+  }, [outcome, index, isHost]);
+
   if (!data) {
     return (
       <GameScreen top={top}>
@@ -66,6 +77,12 @@ export function Reveal({
   const last = cards.length; // 마지막 다음 칸이 카드 10 (다시 하기 / 홈으로)
   const at = Math.min(index, last);
   const connected = state.players.filter((p) => !p.left).length;
+
+  // 카드 넘김 RV-04. 이 폰만 (sound.md)
+  function turn(to: number) {
+    setIndex(to);
+    playSound("rv-04", { isHost: false });
+  }
 
   function act(run: () => Promise<{ error: string } | { ok: true }>, after?: () => void) {
     setError(null);
@@ -116,7 +133,7 @@ export function Reveal({
             >
               홈으로
             </Button>
-            <Button variant="secondary" disabled={pending} onClick={() => setIndex(last - 1)}>
+            <Button variant="secondary" disabled={pending} onClick={() => turn(last - 1)}>
               이전
             </Button>
           </>
@@ -138,9 +155,9 @@ export function Reveal({
       top={top}
       bottom={
         <>
-          <Button onClick={() => setIndex(at + 1)}>다음</Button>
+          <Button onClick={() => turn(at + 1)}>다음</Button>
           {at > 0 && (
-            <Button variant="secondary" onClick={() => setIndex(at - 1)}>
+            <Button variant="secondary" onClick={() => turn(at - 1)}>
               이전
             </Button>
           )}
