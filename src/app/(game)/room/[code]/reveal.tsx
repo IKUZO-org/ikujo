@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { Card, GameScreen } from "@/components/game";
+import { GameVideo } from "@/components/GameVideo";
 import { ErrorLine } from "@/components/Screen";
 import { playSound } from "@/lib/sound";
 import { leaveRoom } from "@/server/actions/leave-room";
@@ -14,6 +15,7 @@ import { getReveal } from "@/server/actions/get-reveal";
 import { replay } from "@/server/actions/replay";
 import type { RevealBody, Who } from "@/server/reveal";
 import type { RoomState } from "@/server/rooms/core";
+import type { VideoId } from "@/lib/video";
 
 const MIN_PLAYERS = 4;
 
@@ -47,16 +49,6 @@ export function Reveal({
       setData({ body: r.body, personal: r.personal });
     });
   }, [gameId, state]);
-
-  // 엔딩 소리: 카드 1 이 처음 보일 때 한 번. 검거 성공 RV-01, 방송 중단 RV-02 (sound.md, 방장 폰)
-  const outcome = data?.body.ending.outcome ?? null;
-  const isHost = state.me.isHost;
-  const endingPlayed = useRef(false);
-  useEffect(() => {
-    if (!outcome || index !== 0 || endingPlayed.current) return;
-    endingPlayed.current = true;
-    playSound(outcome === "caught" ? "rv-01" : "rv-02", { isHost });
-  }, [outcome, index, isHost]);
 
   if (!data) {
     return (
@@ -150,9 +142,25 @@ export function Reveal({
   }
 
   const card = cards[at];
+  const isHost = state.me.isHost;
+  // 엔딩 소리 RV-01 검거 성공 / RV-02 방송 중단 (방장 폰). 카드 1 의 엔딩 영상 V-06/V-07 이 끝난 뒤(못 틀면 바로) 한 번 낸다:
+  // 영상 소리와 겹치지 않게 차례로 (PLAN.md §1, RULES R-13). 이미 본 영상이면(새로 고침) 소리도 이미 났으니 내지 않는다
+  const endingSting = () =>
+    playSound(data.body.ending.outcome === "caught" ? "rv-01" : "rv-02", { isHost });
   return (
     <GameScreen
       top={top}
+      graphic={
+        card.video && (
+          <GameVideo
+            key={card.video}
+            id={card.video}
+            gameId={gameId}
+            isHost={isHost}
+            onEnded={at === 0 ? endingSting : undefined}
+          />
+        )
+      }
       bottom={
         <>
           <Button onClick={() => turn(at + 1)}>다음</Button>
@@ -183,11 +191,15 @@ function List({ children }: { children: ReactNode }) {
   return <ul className="flex w-full flex-col gap-(--space-2)">{children}</ul>;
 }
 
-/** 카드 1~9. 맞춤 해설(8)이 없으면 뺀다. 범인이 나가 온 해설이면 3, 9 도 뺀다 (spec S-12) */
-function buildCards({ body, personal }: Loaded): { title: string; body: ReactNode }[] {
-  const cards: { title: string; body: ReactNode }[] = [
+type RevealCard = { title: string; body: ReactNode; video?: VideoId };
+
+/** 카드 1~9. 맞춤 해설(8)이 없으면 뺀다. 범인이 나가 온 해설이면 3, 9 도 뺀다 (spec S-12).
+ * 영상: 카드 1 엔딩 V-06 검거 성공 / V-07 방송 중단, 카드 7 과거 사고 V-09 (PLAN.md §1) */
+function buildCards({ body, personal }: Loaded): RevealCard[] {
+  const cards: RevealCard[] = [
     {
       title: body.ending.text,
+      video: body.ending.outcome === "caught" ? "v-06" : "v-07",
       body: (
         <Text>
           {body.ending.culpritLeft
@@ -288,7 +300,14 @@ function buildCards({ body, personal }: Loaded): { title: string; body: ReactNod
         </List>
       ),
     },
-    { title: "3주 차 사고의 진실", body: <Text>{body.pastTruth}</Text> },
+    {
+      title: "3주 차 사고의 진실",
+      body: <Text>{body.pastTruth}</Text>,
+      // V-09 가 나오는 동안 RV-03 BGM 은 줄이지 않는다 (R-13 "개발과 정한다", `제안` #112):
+      // 겹치면 앱 소리가 우선이고, V-09 소리는 멜로디 없이 밤바람과 파도만 작게 깔도록 만들어 피아노와 겹쳐도 된다.
+      // 카드는 각자 금방 넘겨서 BGM 을 줄였다 키우면 그 사이 오르내림이 더 어수선하다
+      video: "v-09",
+    },
   ];
   if (personal) cards.push({ title: "우리 판 이야기", body: <Text>{personal}</Text> });
   if (body.ending.culpritLeft) return cards;
