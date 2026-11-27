@@ -52,7 +52,7 @@ export const PHASE_LAYER: Partial<Record<Phase, SoundId>> = {
   secret: "op-02",
   r1: "r1-01",
   r2: "r2-02",
-  r3: "r3-02",
+  r3: "bg-02", // R3-02 잡음만 깔리니 R1, R2 와 달리 BGM 이 없게 들렸다 (QA, #128). 잡음 파일은 남겨 둔다
   vote: "vt-01",
   revote: "vt-01",
   reveal: "rv-03",
@@ -82,10 +82,16 @@ export const TRANSITION_CUES: Partial<Record<`${Phase}>${Phase}`, Cue[]>> = {
     { id: "r3-01", atMs: 2000 }, // 2초
   ],
   "r3>vote": [{ id: "rd-05", atMs: 0 }],
+  "vote>revote": [{ id: "vt-03", atMs: 0 }], // 동점 재투표 경고 스팅 (sound.md VT-03)
 };
 
-// RD-04 째깍을 시작하는 라운드 남은 시간 (sound.md RD-04)
-export const LAST_SECONDS_MS = 30 * 1000; // 30초
+// RD-04 째깍을 시작하는 라운드 남은 시간. 타이머가 빨개지는 1분과 맞춘다 (sound.md RD-04, #128)
+export const LAST_SECONDS_MS = 60 * 1000; // 1분
+
+// 라운드 남은 시간이 이 값을 지나는 순간 진동과 알림음 RD-06 (sound.md RD-06, #128). 늦은 것부터
+export const TIME_ALERTS_MS = [60 * 1000, 10 * 1000]; // 1분, 10초
+export const TIME_ALERT_SOUND: SoundId = "op-04"; // 메신저 알림음을 다시 쓴다 (CH-02 가 RD-01 을 다시 쓰듯)
+export const TIME_ALERT_VIBRATION = [200, 100, 200];
 
 // BGM/앰비언스가 바뀔 때 줄이고 키우는 시간(초)
 export const FADE_S = 1.5; // 1.5초
@@ -178,7 +184,7 @@ export const SOUND_TARGET: Record<SoundId, SoundTarget> = {
 
 // ---- 표를 읽는 함수 --------------------------------------------------------------
 
-/** 지금 깔아 둘 BGM/앰비언스 하나. 없으면 null. `openingVideoDone` 은 V-01 끝남 신호 자리 (지금은 true) */
+/** 지금 깔아 둘 BGM/앰비언스 하나. 없으면 null. `openingVideoDone` 은 V-01 이 끝났거나 건너뛴 뒤 true */
 export function pickLayer(
   phase: string | null,
   remainingMs: number | null,
@@ -199,9 +205,23 @@ export function volumeFor(id: SoundId): number {
   return SOUND_VOLUME[id];
 }
 
+/** 대기실 참가자 목록에 전에 없던 사람이 생겼는가 (LB-01 누가 들어옴). 처음 읽은 목록(prev null)은 아니다 */
+export function hasNewcomer(prev: readonly string[] | null, next: readonly string[]): boolean {
+  if (!prev) return false;
+  const before = new Set(prev);
+  return next.some((id) => !before.has(id));
+}
+
 /** 단계가 prev → next 로 바뀔 때 낼 효과음과 시각 */
 export function phaseCues(prev: string, next: string): Cue[] {
   return TRANSITION_CUES[`${prev}>${next}` as `${Phase}>${Phase}`] ?? [];
+}
+
+/** 남은 시간이 prevMs → nowMs 로 줄며 지난 알림 경계(가장 짧은 것). 없으면 null. 처음 읽은 값(prevMs null)에는 울리지 않는다 */
+export function crossedAlert(prevMs: number | null, nowMs: number | null): number | null {
+  if (prevMs === null || nowMs === null) return null;
+  const hit = TIME_ALERTS_MS.filter((t) => prevMs > t && nowMs <= t && nowMs > 0);
+  return hit.length ? Math.min(...hit) : null;
 }
 
 /** 약 -45dB. 이보다 작은 소리는 무음으로 본다 */

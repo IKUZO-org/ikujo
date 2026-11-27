@@ -5,13 +5,21 @@
 // - 파일이 없거나 못 틀면 아무것도 그리지 않는다: 그래픽 영역은 검정 그대로, 내용은 아래 글이 맡는다 (PRD §24, DESIGN.md §3)
 // - 움직임 줄이기 설정이면 틀지 않는다 (DESIGN.md §7). 이때도 글만으로 진행된다
 // - 한 판에서 끝까지 본 영상은 다시 틀지 않는다: 새로 고침, 탭 바꾸기로 방장 폰 소리가 또 나지 않게
+// - 끝난 영상은 마지막 장면에 멈춰 둔다. 이미 본 영상은 틀지 않고 마지막 장면으로만 옮겨 보여 준다 (#127, #125 리뷰).
+//   iOS 처럼 틀기 전에는 장면을 그리지 않는 브라우저에서는 검정으로 남는다
 // 영상은 글과 같은 내용이라 읽어 주지 않는다 (aria-hidden). 글은 그래픽 위에 겹치지 않는다
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readItem, writeItem } from "@/lib/session-item";
 import { isOn, onSettingsChange } from "@/lib/settings";
+import { onNextTap } from "@/lib/tap";
 import { playedKey, VIDEO_VOLUME, videoHasSound, videoSrc, type VideoId } from "@/lib/video";
 
-type Status = "playing" | "seen" | "skipped" | "failed";
+// playing: 트는 중, ended: 이번에 끝까지 봄(마지막 장면), seen: 전에 봄(틀지 않고 마지막 장면),
+// skipped: 움직임 줄이기라 틀지 않음, failed: 못 틂
+type Status = "playing" | "ended" | "seen" | "skipped" | "failed";
+
+// 마지막 장면으로 옮길 때 끝에서 조금 앞 (끝 시각 그대로면 장면을 안 그리는 브라우저가 있다)
+const LAST_FRAME_GAP_S = 0.05;
 
 const soundSnapshot = () => isOn("sound");
 const serverSoundSnapshot = () => false;
@@ -29,6 +37,7 @@ export function GameVideo({
   gameId,
   isHost = false,
   onEnded,
+  onTime,
 }: {
   id: VideoId;
   gameId: string;
@@ -36,11 +45,12 @@ export function GameVideo({
   isHost?: boolean;
   /** 끝까지 봤거나("ended"), 못 틀어서 건너뛰었을 때("skipped") 한 번. 이미 본 영상이면 부르지 않는다 */
   onEnded?: (how: "ended" | "skipped") => void;
+  /** 재생 중 시각(초)이 바뀔 때마다 (timeupdate). 영상 안 장면에 맞춰 소리를 낼 때 쓴다 */
+  onTime?: (seconds: number) => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const key = playedKey(gameId, id);
   // 게임 화면은 방 상태를 읽은 뒤 브라우저에서만 그려져서(room-view) 처음부터 저장소를 읽어도 된다.
-  // seen: 이 판에서 이미 끝까지 봄. skipped: 움직임 줄이기라 틀지 않음
   const [status, setStatus] = useState<Status>(() =>
     readItem(key) !== null ? "seen" : reducedMotion() ? "skipped" : "playing",
   );
@@ -50,16 +60,20 @@ export function GameVideo({
   const wantSound = videoHasSound(id, { isHost, soundOn }) && !blocked;
 
   const ended = useRef(onEnded);
+  const time = useRef(onTime);
   useEffect(() => {
     ended.current = onEnded;
+    time.current = onTime;
   });
 
   // 처음 한 번 튼다. 움직임 줄이기면 못 튼 것으로 알린다. 이미 본 영상은 뒤에 이어지는 소리도 이미 났으니 알리지 않는다
   useEffect(() => {
     if (status === "skipped") return ended.current?.("skipped");
+    if (status !== "playing") return; // 이미 본 영상은 틀지 않는다
     const v = ref.current;
     if (!v) return;
     let cancelled = false;
+    let offTap = () => {};
     const hasSound = () => videoHasSound(id, { isHost, soundOn: isOn("sound") });
     // 음소거로 틀고 있다가 화면을 한 번 누르면 소리를 켠다 (sound.md 규칙 6 "첫 탭에서 소리 열기").
     // 모바일은 누르는 순간 안에서 켜야 하므로 여기서 바로 바꾼다
@@ -77,14 +91,14 @@ export function GameVideo({
         setBlocked(true);
         v.muted = true;
         v.play().catch(() => !cancelled && fail());
-        document.addEventListener("pointerdown", unlock, { once: true });
+        offTap = onNextTap(unlock);
         return;
       }
       if (!(e instanceof DOMException && e.name === "AbortError")) fail();
     });
     return () => {
       cancelled = true;
-      document.removeEventListener("pointerdown", unlock);
+      offTap();
     };
     // 처음 한 번만 튼다. 소리는 아래 effect 가 따른다
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,17 +110,25 @@ export function GameVideo({
   }, [wantSound]);
 
   function fail() {
+    // 이미 본 영상의 마지막 장면을 못 불러온 것은 알리지 않는다: 뒤에 이어지는 소리가 또 나지 않게
+    const was = status;
     setStatus("failed");
-    ended.current?.("skipped");
+    if (was === "playing") ended.current?.("skipped");
   }
 
   function finish() {
     writeItem(key, "1");
-    setStatus("seen");
+    setStatus("ended");
     ended.current?.("ended");
   }
 
-  if (status !== "playing") return null;
+  // 이미 본 영상: 틀지 않고 마지막 장면으로만 옮긴다 (소리 없음)
+  function showLastFrame(v: HTMLVideoElement) {
+    if (status !== "seen" || !Number.isFinite(v.duration)) return;
+    v.currentTime = Math.max(0, v.duration - LAST_FRAME_GAP_S);
+  }
+
+  if (status === "skipped" || status === "failed") return null;
   return (
     <div aria-hidden className="relative flex-1">
       <video
@@ -117,6 +139,9 @@ export function GameVideo({
         playsInline
         preload="auto"
         disablePictureInPicture
+        onLoadedMetadata={(e) => showLastFrame(e.currentTarget)}
+        // 재생 중일 때만 알린다. 마지막 장면으로 옮길 때 알리면 시각에 맞춘 소리(RV-02 등)가 또 난다
+        onTimeUpdate={(e) => status === "playing" && time.current?.(e.currentTarget.currentTime)}
         onEnded={finish}
         onError={fail}
         className="absolute inset-0 size-full bg-(--color-bg) object-contain"
