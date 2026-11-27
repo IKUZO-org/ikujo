@@ -17,7 +17,7 @@ import { startGame } from "@/server/actions/start-game";
 import type { RoomState } from "@/server/rooms/core";
 import { CharacterCard } from "./character-card";
 import { Ghost } from "./ghost";
-import { GhostCovers } from "./ghost-covers";
+import { useGhostCover } from "./ghost-covers";
 import { Opening } from "./opening";
 import { Reveal } from "./reveal";
 import { PhaseBar } from "./phase-bar";
@@ -43,6 +43,9 @@ export function RoomView({ title }: { title: string }) {
     state,
     whisperRounds ? WHISPER_POLL_MS : null,
   );
+
+  // r2 이후 덮는 화면(속보, 녹화 끊김, 출몰). 라운드 단계에서만 그린다
+  const ghostCover = useGhostCover(game, isGhost);
 
   if (loadError) {
     // 방장이 해설에서 홈으로(endRoom)를 누르면 방이 닫혀 다시 읽기가 "없는 방"이 된다.
@@ -84,7 +87,7 @@ export function RoomView({ title }: { title: string }) {
 
   switch (game.phase) {
     case "intro":
-      return <Opening key={game.id} game={game} top={top} reload={load} />;
+      return <Opening key={game.id} game={game} isHost={state.me.isHost} top={top} reload={load} />;
     case "secret":
       return <CharacterCard key={game.id} game={game} mine={mine} top={top} reload={load} />;
     case "r1":
@@ -109,11 +112,14 @@ export function RoomView({ title }: { title: string }) {
               key={`${game.id}:${game.phase}`}
               game={{ ...game, round: game.round }}
               mine={mine}
+              isHost={state.me.isHost}
+              // 덮는 화면이 떠 있는 동안은 라운드 영상을 틀지 않는다. 닫으면 그때 튼다
+              videoReady={ghostCover === null}
               top={top}
               reload={load}
             />
           )}
-          <GhostCovers game={game} isGhost={isGhost} />
+          {ghostCover}
         </>
       );
     }
