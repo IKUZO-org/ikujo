@@ -1,4 +1,4 @@
-<!-- 원본: Hatch 팀 문서 "데이터 구성" 4판. 고칠 때는 Hatch에서 고치고 이 사본을 바꾼다 -->
+<!-- 원본: Hatch 팀 문서 "데이터 구성" 5판. 고칠 때는 Hatch에서 고치고 이 사본을 바꾼다 -->
 # 데이터 구성 — 「LAST ONE」
 
 ## 0. 문서 정보
@@ -7,7 +7,7 @@
 | 버전 | v0.1 |
 | 근거 | PRD 2판, 기능명세 v0.1 |
 | 저장소 | Supabase (Postgres + Auth + Realtime). 시나리오는 레포 안 JSON |
-| 바뀐 것 | 4판: 익명 사용자도 30일 보관(D-026), 24시간 활동 없는 방과 판은 ended(D-027), `ended_reason`에 `cancelled`, `stale` 추가(D-025) (§6 댓글 @uyeon0, PO 2026-11-26 확정) |
+| 바뀐 것 | 5판: 쓰지 않는 표 profiles, completions를 지움 (§2 댓글 @uyeon0, PO 2026-11-27 확정). FR-090을 다시 다룰 때 새로 만든다. 4판: 익명 사용자도 30일 보관(D-026), 24시간 활동 없는 방과 판은 ended(D-027), `ended_reason`에 `cancelled`, `stale` 추가(D-025) (§6 댓글 @uyeon0, PO 2026-11-26 확정) |
 | 상태 표시 | `확정` PRD에서 정함 · `제안` 이 문서에서 제안 |
 
 원칙
@@ -20,8 +20,6 @@
 
 ## 1. 표 한눈에
 ```
-auth.users (Supabase)
-  └─ profiles 1:1            보류 (로그인 없음, D-018)
 rooms ──< players            방과 참가자 (손님 포함)
 rooms ──< games              판 (다시 하기면 여러 개)
 games ──< assignments        자리마다 인물, 비밀, 단서 (본인만)
@@ -30,19 +28,14 @@ games ──< readies            준비/확인 표시
 games ──< votes              투표 (본인만, 집계는 함수)
 games ──< ghost_actions      속삭임, 출몰
 games ── 1 reveals           해설 (reveal 단계부터)
-profiles ──< completions     보류 (FR-090 보류)
 events                       기록 (분석)
 ```
 
 ## 2. 표 정의
 
-### profiles `보류` (D-018)
-- 로그인이 없어 지금은 쓰지 않는다. 표는 2단계에서 이미 만들었다. 지울지, 둘지는 개발이 정한다
-| 칸 | 형 | 설명 |
-| --- | --- | --- |
-| user_id | uuid PK → auth.users | |
-| nickname | text 1~10 | 기본 닉네임 |
-| created_at | timestamptz | |
+### 지운 표 `확정` (PO 2026-11-27)
+- `profiles`(기본 닉네임), `completions`(완료 기록)는 로그인이 없어(D-018) 쓰지 않아 지웠다. 새 마이그레이션 `010`에서 지운다
+- FR-090(완료 체크)을 다시 다루면 그때 "계정 없이 폰마다 익명 사용자"를 기준으로 새로 설계한다
 
 ### rooms
 | 칸 | 형 | 설명 |
@@ -149,15 +142,6 @@ events                       기록 (분석)
 | created_at | timestamptz | |
 - RLS: 그 판 참가자 + `games.phase in ('reveal','ended')`일 때만
 
-### completions `보류` (FR-090 보류, D-018)
-| 칸 | 형 | 설명 |
-| --- | --- | --- |
-| user_id | uuid → profiles | |
-| scenario_id | text | |
-| game_id | uuid | |
-| completed_at | timestamptz | |
-- PK (user_id, scenario_id, game_id). 화면은 scenario_id별 있음/없음만
-
 ### events (기록)
 | 칸 | 형 | 설명 |
 | --- | --- | --- |
@@ -174,7 +158,6 @@ events                       기록 (분석)
 
 | 표 | 읽기 | 쓰기 |
 | --- | --- | --- |
-| profiles | 본인 | 본인 |
 | rooms | 그 방 참가자 (코드로 찾기는 서버 함수 `join_room`) | 서버 |
 | players | 같은 방 참가자 (닉네임, seat, left_at) | 서버 |
 | games | 그 방 참가자 | 서버 |
@@ -185,7 +168,6 @@ events                       기록 (분석)
 | votes | 본인 것만 | 서버 (`vote` 동작이 검사 후 넣음) |
 | ghost_actions | whisper: 보낸 사람, 받은 사람 / haunt: 그 방 참가자 | 서버 |
 | reveals | 참가자 + reveal 이후 | 서버 |
-| completions | 본인 | 서버 |
 | events | 없음 | 서버 |
 
 - 쓰기는 전부 Server Action에서 service role로. 클라이언트에서 DB에 바로 쓰지 않는다
@@ -248,7 +230,7 @@ CAG의 고정 맥락이자 규칙 검사의 기준. LLM과 서버가 같은 파�
 | events | 개인 식별 없이 보관 |
 
 ## 7. 마이그레이션 순서
-1. `001_core.sql`: rooms, players, games, game_secrets, assignments, revealed_clues, readies, votes, ghost_actions, reveals, profiles, completions, events + 인덱스
+1. `001_core.sql`: rooms, players, games, game_secrets, assignments, revealed_clues, readies, votes, ghost_actions, reveals, profiles, completions, events + 인덱스 (profiles, completions는 `010`에서 지움)
 2. `002_rls.sql`: 도우미 함수와 §3 정책
 3. `003_functions.sql`: `join_room`, `tally`
 4. Supabase 설정: 익명 로그인 켜기, Realtime broadcast 켜기
