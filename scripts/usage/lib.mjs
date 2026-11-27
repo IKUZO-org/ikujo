@@ -18,12 +18,27 @@ const tokensOf = (u = {}) => ({
   cacheWrite: u.cache_creation_input_tokens ?? 0,
   cacheRead: u.cache_read_input_tokens ?? 0,
 });
-const weight = (t) => t.input * WEIGHT.input + t.output * WEIGHT.output + t.cacheWrite * WEIGHT.cacheWrite + t.cacheRead * WEIGHT.cacheRead;
-const add = (a, b) => ({ input: a.input + b.input, output: a.output + b.output, cacheWrite: a.cacheWrite + b.cacheWrite, cacheRead: a.cacheRead + b.cacheRead });
+const weight = (t) =>
+  t.input * WEIGHT.input +
+  t.output * WEIGHT.output +
+  t.cacheWrite * WEIGHT.cacheWrite +
+  t.cacheRead * WEIGHT.cacheRead;
+const add = (a, b) => ({
+  input: a.input + b.input,
+  output: a.output + b.output,
+  cacheWrite: a.cacheWrite + b.cacheWrite,
+  cacheRead: a.cacheRead + b.cacheRead,
+});
 const bump = (o, k, n = 1) => {
   if (typeof k === "string" && k) o[k] = (o[k] ?? 0) + n;
 };
-const inside = (cwd, roots) => typeof cwd === "string" && roots.some((r) => cwd === r || cwd.startsWith(r.endsWith("/") ? r : `${r}/`));
+/** 경로 비교용: Windows 역슬래시를 슬래시로, 드라이브 글자를 소문자로 (이슈 #41) */
+const normPath = (p) => p.replace(/\\/g, "/").replace(/^[A-Za-z]:/, (d) => d.toLowerCase());
+const inside = (cwd, roots) => {
+  if (typeof cwd !== "string") return false;
+  const c = normPath(cwd);
+  return roots.map(normPath).some((r) => c === r || c.startsWith(r.endsWith("/") ? r : `${r}/`));
+};
 const day = (ts) => (typeof ts === "string" ? ts.slice(0, 10) : null);
 
 function parse(line) {
@@ -74,7 +89,8 @@ export function summarize(lines, { branch, roots }) {
       if (b?.type !== "tool_use" || typeof b.name !== "string") continue;
       cur.tools.push(b.name);
       if (b.name === "Skill" && typeof b.input?.skill === "string") cur.skills.push(b.input.skill);
-      if ((b.name === "Agent" || b.name === "Task") && typeof b.input?.subagent_type === "string") cur.agents.push(b.input.subagent_type);
+      if ((b.name === "Agent" || b.name === "Task") && typeof b.input?.subagent_type === "string")
+        cur.agents.push(b.input.subagent_type);
     }
     msgs.set(key, cur);
   }
@@ -82,7 +98,8 @@ export function summarize(lines, { branch, roots }) {
   // 세션마다 전체 무게 (브랜치와 상관없이) → 이 브랜치 몫의 비용
   /** @type {Map<string, number>} */
   const sessionWeight = new Map();
-  for (const x of msgs.values()) sessionWeight.set(x.session, (sessionWeight.get(x.session) ?? 0) + weight(x.tokens));
+  for (const x of msgs.values())
+    sessionWeight.set(x.session, (sessionWeight.get(x.session) ?? 0) + weight(x.tokens));
 
   const s = {
     branch,
@@ -144,7 +161,10 @@ export function summarize(lines, { branch, roots }) {
  * @param {Set<string>} sessions
  */
 export function rateRange(lines, sessions) {
-  const rows = lines.map(parse).filter((r) => r && sessions.has(r.session)).sort((a, b) => a.t - b.t);
+  const rows = lines
+    .map(parse)
+    .filter((r) => r && sessions.has(r.session))
+    .sort((a, b) => a.t - b.t);
   if (!rows.length) return null;
   const pick = (k) => {
     const xs = rows.filter((r) => typeof r[k] === "number");
@@ -153,8 +173,10 @@ export function rateRange(lines, sessions) {
   return { five_hour: pick("five_hour"), seven_day: pick("seven_day") };
 }
 
-const num = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n));
-export const usd = (n) => (n == null ? "모름 (비용 기록 없음)" : n > 0 && n < 0.01 ? "<$0.01" : `$${n.toFixed(2)}`);
+const num = (n) =>
+  n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n);
+export const usd = (n) =>
+  n == null ? "모름 (비용 기록 없음)" : n > 0 && n < 0.01 ? "<$0.01" : `$${n.toFixed(2)}`;
 const top = (o, k = 8) =>
   Object.entries(o)
     .sort((a, b) => b[1] - a[1])
@@ -165,7 +187,9 @@ const pct = (r) => (r ? `${r.from}% → ${r.to}%` : "기록 없음");
 
 /** 작업 기록의 `## 사용량` 칸. 맨 끝 주석 한 줄은 팀 합계(usage-report)가 다시 읽는다 */
 export function toMarkdown(s, today = new Date().toISOString().slice(0, 10)) {
-  const rate = s.rate ? `5시간 ${pct(s.rate.five_hour)} · 주간 ${pct(s.rate.seven_day)}` : "기록 없음 (상태줄 사용률이 켜진 뒤부터 남는다)";
+  const rate = s.rate
+    ? `5시간 ${pct(s.rate.five_hour)} · 주간 ${pct(s.rate.seven_day)}`
+    : "기록 없음 (상태줄 사용률이 켜진 뒤부터 남는다)";
   const body = {
     branch: s.branch,
     issue: s.issue,
@@ -220,7 +244,15 @@ export function weekOf(date) {
  * @param {{ person: string, date: string, usage: any }[]} entries
  */
 export function aggregate(entries) {
-  const row = () => ({ prs: 0, costUSD: 0, unknownCost: 0, input: 0, output: 0, cacheWrite: 0, cacheRead: 0 });
+  const row = () => ({
+    prs: 0,
+    costUSD: 0,
+    unknownCost: 0,
+    input: 0,
+    output: 0,
+    cacheWrite: 0,
+    cacheRead: 0,
+  });
   const t = {
     /** @type {Record<string, ReturnType<typeof row>>} */ people: {},
     /** @type {Record<string, ReturnType<typeof row>>} */ weeks: {},
@@ -263,7 +295,10 @@ export function reportMarkdown(t, today = new Date().toISOString().slice(0, 10))
     "| --- | --- | --- | --- | --- | --- |",
     ...Object.entries(o)
       .sort((a, b) => b[1].costUSD - a[1].costUSD)
-      .map(([k, r]) => `| ${k} | ${r.prs} | ${usd(r.costUSD)}${r.unknownCost ? ` (비용 모름 ${r.unknownCost})` : ""} | ${num(r.output)} | ${num(r.input)} | ${num(r.cacheRead)} |`),
+      .map(
+        ([k, r]) =>
+          `| ${k} | ${r.prs} | ${usd(r.costUSD)}${r.unknownCost ? ` (비용 모름 ${r.unknownCost})` : ""} | ${num(r.output)} | ${num(r.input)} | ${num(r.cacheRead)} |`,
+      ),
     "",
   ];
   return [

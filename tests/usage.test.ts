@@ -30,11 +30,18 @@ const asst = (o: {
     message: {
       id: o.id,
       model: o.model ?? "claude-opus-5-5",
-      usage: { input_tokens: 10, output_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, ...o.usage },
+      usage: {
+        input_tokens: 10,
+        output_tokens: 100,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+        ...o.usage,
+      },
       content: o.blocks ?? [{ type: "text", text: "비밀 프롬프트" }],
     },
   });
-const cost = (session: string, usd: number) => JSON.stringify({ type: "cost-state", sessionId: session, totalCostUSD: usd });
+const cost = (session: string, usd: number) =>
+  JSON.stringify({ type: "cost-state", sessionId: session, totalCostUSD: usd });
 const tool = (name: string, input: object = {}) => ({ type: "tool_use", name, input });
 
 describe("slugOf", () => {
@@ -68,13 +75,28 @@ describe("summarize", () => {
     expect(summarize(lines, { branch: BR, roots: ["/repo"] }).messages).toBe(2);
   });
 
+  it("Windows: 기록은 역슬래시, git 은 슬래시여도 같은 폴더로 센다 (이슈 #41)", () => {
+    const lines = [
+      asst({ id: "m1", cwd: "C:\\Users\\hyeon\\ikujo" }),
+      asst({ id: "m2", cwd: "c:\\Users\\hyeon\\ikujo\\src" }),
+      asst({ id: "m3", cwd: "C:\\Users\\hyeon\\ikujo-other" }),
+    ];
+    expect(summarize(lines, { branch: BR, roots: ["C:/Users/hyeon/ikujo"] }).messages).toBe(2);
+  });
+
   it("메인 대화와 서브에이전트, 모델별로 나눈다. skill과 에이전트 이름을 센다", () => {
     const lines = [
-      asst({ id: "m1", blocks: [tool("Skill", { skill: "worklog" }), tool("Agent", { subagent_type: "Explore" })] }),
+      asst({
+        id: "m1",
+        blocks: [tool("Skill", { skill: "worklog" }), tool("Agent", { subagent_type: "Explore" })],
+      }),
       asst({ id: "m2", side: true, model: "claude-haiku-5-5", usage: { output_tokens: 40 } }),
     ];
     const s = summarize(lines, { branch: BR, roots: ["/repo"] });
-    expect(s.where).toEqual({ main: { messages: 1, output: 100 }, subagent: { messages: 1, output: 40 } });
+    expect(s.where).toEqual({
+      main: { messages: 1, output: 100 },
+      subagent: { messages: 1, output: 40 },
+    });
     expect(Object.keys(s.models)).toEqual(["claude-opus-5-5", "claude-haiku-5-5"]);
     expect(s.skills).toEqual({ worklog: 1 });
     expect(s.agents).toEqual({ Explore: 1 });
@@ -96,7 +118,11 @@ describe("summarize", () => {
   });
 
   it("깨진 줄과 다른 종류 줄은 건너뛴다", () => {
-    const lines = ["{깨짐", JSON.stringify({ type: "user", message: { content: "x" } }), asst({ id: "m1" })];
+    const lines = [
+      "{깨짐",
+      JSON.stringify({ type: "user", message: { content: "x" } }),
+      asst({ id: "m1" }),
+    ];
     expect(summarize(lines, { branch: BR, roots: ["/repo"] }).messages).toBe(1);
   });
 
@@ -113,23 +139,33 @@ describe("rateRange", () => {
       { t: 2, session: "other", five_hour: 50, seven_day: 60 },
       { t: 3, session: "s1", five_hour: 25, seven_day: 34 },
     ].map((x) => JSON.stringify(x));
-    expect(rateRange(log, new Set(["s1"]))).toEqual({ five_hour: { from: 10, to: 25 }, seven_day: { from: 30, to: 34 } });
+    expect(rateRange(log, new Set(["s1"]))).toEqual({
+      five_hour: { from: 10, to: 25 },
+      seven_day: { from: 30, to: 34 },
+    });
     expect(rateRange(log, new Set(["none"]))).toBeNull();
   });
 });
 
 describe("작업 기록 칸과 팀 합계", () => {
-  const s = summarize(
-    [asst({ id: "m1", blocks: [tool("Read")] }), cost("s1", 0.25)],
-    { branch: "hyeon/feat-12-room", roots: ["/repo"] },
-  );
+  const s = summarize([asst({ id: "m1", blocks: [tool("Read")] }), cost("s1", 0.25)], {
+    branch: "hyeon/feat-12-room",
+    roots: ["/repo"],
+  });
 
   it("## 사용량 칸에 표와 다시 읽을 숫자 한 줄이 있다", () => {
-    const md = toMarkdown({ ...s, rate: { five_hour: { from: 10, to: 25 }, seven_day: { from: 30, to: 34 } } });
+    const md = toMarkdown({
+      ...s,
+      rate: { five_hour: { from: 10, to: 25 }, seven_day: { from: 30, to: 34 } },
+    });
     expect(md).toMatch(/^## 사용량/);
     expect(md).toContain("$0.25");
     expect(md).toContain("주간 30% → 34%");
-    expect(parseUsageComment(md)).toMatchObject({ branch: "hyeon/feat-12-room", issue: 12, costUSD: 0.25 });
+    expect(parseUsageComment(md)).toMatchObject({
+      branch: "hyeon/feat-12-room",
+      issue: 12,
+      costUSD: 0.25,
+    });
   });
 
   it("사람, 이슈, 모델, 도구별로 더한다", () => {
