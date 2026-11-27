@@ -215,18 +215,20 @@ export function Sheet({
 /**
  * 화면 전체를 덮는 연출 (§3 "가상 폰 연출은 화면 전체를 덮고, 닫으면 원래 화면으로", S-14).
  * 게임 속 모양으로 새로 그린다: 실제 방송사, 앱 모양을 따라 하지 않는다 (BR-008).
- * 그래픽 영역은 어셋이 오면 채운다 (지금은 검정 그대로, PRD §24)
+ * graphic: 그래픽 영역에 넣을 영상, 그림. 없으면 검정 그대로 (PRD §24)
  */
 export function Cover({
   label,
   title,
   children,
+  graphic,
   action,
   onClose,
 }: {
   label: ReactNode;
   title: ReactNode;
   children?: ReactNode;
+  graphic?: ReactNode;
   action: string;
   onClose: () => void;
 }) {
@@ -238,7 +240,9 @@ export function Cover({
       className="fixed inset-0 z-40 flex justify-center bg-(--color-bg)"
     >
       <div className="flex min-h-dvh w-full max-w-[430px] flex-col px-(--space-4) pt-[env(safe-area-inset-top)] text-(--color-text)">
-        <div aria-hidden className="flex min-h-24 flex-1 bg-(--color-bg)" />
+        <div aria-hidden className="flex min-h-24 flex-1 bg-(--color-bg)">
+          {graphic}
+        </div>
         <div className="flex flex-col items-center gap-(--space-2) pb-(--space-3) text-center">
           {label}
           <h2 className="text-(length:--text-xl) font-extrabold">{title}</h2>

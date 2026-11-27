@@ -5,16 +5,22 @@
 // 새로 고쳐도 고른 탭은 그대로, 개인 내용은 다시 가린다 (#44).
 // 새 개인 단서가 오면 내 것 탭에 점 + 진동 (NFR-006, 설정 S-13 에서 끄면 점만). 진동만으로 알리지 않는다 (DESIGN.md §7).
 // 준비 완료는 현황에만 반영하고, 다음 라운드는 타이머로만 넘어간다 (OQ-007 임시 결정, spec §9).
-// 이벤트 알림(FR-044, S-14 덮는 화면)은 단계 8, 9 에서 붙인다
+// 이벤트 알림(FR-044, S-14 덮는 화면)은 단계 8, 9 에서 붙인다.
+// 공용 탭 그래픽 영역: R2 편집본 V-02, R3 원본 V-03 (FR-081, PRD §28.9, #101). 소리는 방장 폰만
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { Card, Chip, GameScreen, NewBadge, Tabs, usePrivateReveal } from "@/components/game";
+import { GameVideo } from "@/components/GameVideo";
 import { ErrorLine } from "@/components/Screen";
 import { readItem, writeItem } from "@/lib/session-item";
 import { vibrate } from "@/lib/settings";
 import { ready } from "@/server/actions/phase";
 import type { MineState } from "@/server/reads";
 import type { GameState } from "@/server/rooms/core";
+import type { VideoId } from "@/lib/video";
+
+// 라운드 영상. R1 숙소 거실은 영상이 없다 (video PLAN.md §1)
+const ROUND_VIDEO: Partial<Record<GameState["phase"], VideoId>> = { r2: "v-02", r3: "v-03" };
 
 type Tab = "public" | "mine";
 type Clue = { id: string; round: number; text: string };
@@ -23,11 +29,16 @@ export type RoundGame = GameState & { round: NonNullable<GameState["round"]> };
 export function Round({
   game,
   mine,
+  isHost,
+  videoReady = true,
   top,
   reload,
 }: {
   game: RoundGame;
   mine: MineState | null;
+  isHost: boolean;
+  /** false 면 라운드 영상을 아직 틀지 않는다 (덮는 화면이 떠 있음) */
+  videoReady?: boolean;
   top: ReactNode;
   reload: () => Promise<void>;
 }) {
@@ -66,12 +77,18 @@ export function Round({
   }
 
   const showMine = tab === "mine" && reveal.open && myClues !== null;
+  const video = ROUND_VIDEO[game.phase];
+  // 소리 자리 (playSound #99 머지 뒤): 이번 라운드 공용 단서가 새로 보이면 RD-03 (방장 폰, sound.md 라운드 공통)
+  const publicGraphic = video && videoReady && (
+    <GameVideo id={video} gameId={game.id} isHost={isHost} />
+  );
+  const graphic = tab === "mine" ? (showMine ? undefined : reveal.cover) : publicGraphic;
 
   return (
     <GameScreen
       isPrivate={tab === "mine"}
       top={top}
-      graphic={tab === "mine" && !showMine ? reveal.cover : undefined}
+      graphic={graphic}
       bottom={
         <>
           <Tabs
@@ -207,6 +224,7 @@ function useClueAlert(gameId: string, clues: Clue[] | null, viewing: boolean) {
     if (ids.length === 0) return;
     for (const id of ids) buzzed.current.add(id);
     vibrate(200);
+    // 소리 자리 (playSound #99 머지 뒤, 내 폰에서만): 단서면 RD-02, 속삭임(id 가 "w-" 로 시작)이면 GH-03 (sound.md)
   }, [freshKey, viewing]);
 
   function markSeen() {

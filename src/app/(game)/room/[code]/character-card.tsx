@@ -3,6 +3,7 @@
 // 공용: "각자 폰으로 비밀을 확인하세요", 확인 n/N. 개인: 인물, 소개, 비밀, 알리바이, (범인만) 범인 안내.
 // 범인 안내도 같은 테두리, 띠, 글자색 (DESIGN.md §4: 색으로 알아채지 않게).
 // "확인했어요" → ready(secret). 모두 누르거나 2분 → r1 (서버가 넘긴다)
+// 소리 자리 (playSound #99 머지 뒤): 카드를 열 때 CH-01, 내 폰만. 범인도 같은 소리, 같은 길이 (sound.md 규칙 4)
 import { useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { Chip, GameScreen, usePrivateReveal } from "@/components/game";
