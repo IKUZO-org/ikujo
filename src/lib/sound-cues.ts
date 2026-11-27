@@ -82,6 +82,7 @@ export const TRANSITION_CUES: Partial<Record<`${Phase}>${Phase}`, Cue[]>> = {
     { id: "r3-01", atMs: 2000 }, // 2초
   ],
   "r3>vote": [{ id: "rd-05", atMs: 0 }],
+  "vote>revote": [{ id: "vt-03", atMs: 0 }], // 동점 재투표 경고 스팅 (sound.md VT-03)
 };
 
 // RD-04 째깍을 시작하는 라운드 남은 시간 (sound.md RD-04)
@@ -178,7 +179,7 @@ export const SOUND_TARGET: Record<SoundId, SoundTarget> = {
 
 // ---- 표를 읽는 함수 --------------------------------------------------------------
 
-/** 지금 깔아 둘 BGM/앰비언스 하나. 없으면 null. `openingVideoDone` 은 V-01 끝남 신호 자리 (지금은 true) */
+/** 지금 깔아 둘 BGM/앰비언스 하나. 없으면 null. `openingVideoDone` 은 V-01 이 끝났거나 건너뛴 뒤 true */
 export function pickLayer(
   phase: string | null,
   remainingMs: number | null,
@@ -197,6 +198,13 @@ export function shouldPlay(id: SoundId, isHost: boolean): boolean {
 
 export function volumeFor(id: SoundId): number {
   return SOUND_VOLUME[id];
+}
+
+/** 대기실 참가자 목록에 전에 없던 사람이 생겼는가 (LB-01 누가 들어옴). 처음 읽은 목록(prev null)은 아니다 */
+export function hasNewcomer(prev: readonly string[] | null, next: readonly string[]): boolean {
+  if (!prev) return false;
+  const before = new Set(prev);
+  return next.some((id) => !before.has(id));
 }
 
 /** 단계가 prev → next 로 바뀔 때 낼 효과음과 시각 */

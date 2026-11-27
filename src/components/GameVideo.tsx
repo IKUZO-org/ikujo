@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readItem, writeItem } from "@/lib/session-item";
 import { isOn, onSettingsChange } from "@/lib/settings";
+import { onNextTap } from "@/lib/tap";
 import { playedKey, VIDEO_VOLUME, videoHasSound, videoSrc, type VideoId } from "@/lib/video";
 
 type Status = "playing" | "seen" | "skipped" | "failed";
@@ -29,6 +30,7 @@ export function GameVideo({
   gameId,
   isHost = false,
   onEnded,
+  onTime,
 }: {
   id: VideoId;
   gameId: string;
@@ -36,6 +38,8 @@ export function GameVideo({
   isHost?: boolean;
   /** 끝까지 봤거나("ended"), 못 틀어서 건너뛰었을 때("skipped") 한 번. 이미 본 영상이면 부르지 않는다 */
   onEnded?: (how: "ended" | "skipped") => void;
+  /** 재생 중 시각(초)이 바뀔 때마다 (timeupdate). 영상 안 장면에 맞춰 소리를 낼 때 쓴다 */
+  onTime?: (seconds: number) => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const key = playedKey(gameId, id);
@@ -50,8 +54,10 @@ export function GameVideo({
   const wantSound = videoHasSound(id, { isHost, soundOn }) && !blocked;
 
   const ended = useRef(onEnded);
+  const time = useRef(onTime);
   useEffect(() => {
     ended.current = onEnded;
+    time.current = onTime;
   });
 
   // 처음 한 번 튼다. 움직임 줄이기면 못 튼 것으로 알린다. 이미 본 영상은 뒤에 이어지는 소리도 이미 났으니 알리지 않는다
@@ -60,6 +66,7 @@ export function GameVideo({
     const v = ref.current;
     if (!v) return;
     let cancelled = false;
+    let offTap = () => {};
     const hasSound = () => videoHasSound(id, { isHost, soundOn: isOn("sound") });
     // 음소거로 틀고 있다가 화면을 한 번 누르면 소리를 켠다 (sound.md 규칙 6 "첫 탭에서 소리 열기").
     // 모바일은 누르는 순간 안에서 켜야 하므로 여기서 바로 바꾼다
@@ -77,14 +84,14 @@ export function GameVideo({
         setBlocked(true);
         v.muted = true;
         v.play().catch(() => !cancelled && fail());
-        document.addEventListener("pointerdown", unlock, { once: true });
+        offTap = onNextTap(unlock);
         return;
       }
       if (!(e instanceof DOMException && e.name === "AbortError")) fail();
     });
     return () => {
       cancelled = true;
-      document.removeEventListener("pointerdown", unlock);
+      offTap();
     };
     // 처음 한 번만 튼다. 소리는 아래 effect 가 따른다
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,6 +124,7 @@ export function GameVideo({
         playsInline
         preload="auto"
         disablePictureInPicture
+        onTimeUpdate={(e) => time.current?.(e.currentTarget.currentTime)}
         onEnded={finish}
         onError={fail}
         className="absolute inset-0 size-full bg-(--color-bg) object-contain"

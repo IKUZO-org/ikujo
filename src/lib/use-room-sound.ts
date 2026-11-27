@@ -4,7 +4,7 @@
 // 단계 전환 효과음은 이 폰이 전환을 직접 본 때만 낸다: 새로 고침, 재접속 뒤 처음 읽은 단계에는 BGM 만 다시 깐다
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { listenFirstTap, playSound, setLayer } from "@/lib/sound";
-import { LAST_SECONDS_MS, phaseCues, pickLayer } from "@/lib/sound-cues";
+import { hasNewcomer, LAST_SECONDS_MS, phaseCues, pickLayer } from "@/lib/sound-cues";
 import { isOpeningDone, onOpeningDone } from "@/lib/video";
 import type { RoomState } from "@/server/rooms/core";
 
@@ -29,6 +29,20 @@ export function useRoomSound(state: RoomState | null, remainingMs: number | null
   const layer = pickLayer(phase, remainingMs, openingDone);
   useEffect(() => setLayer(layer, isHost), [layer, isHost]);
   useEffect(() => () => setLayer(null, false), []);
+
+  // LB-01 대기실에 누가 들어옴. 이 폰이 대기실을 보는 동안 목록에 새 사람이 생긴 때만 (새로 고침 뒤 처음 읽은 목록은 아님)
+  const lobbyIds = state?.status === "lobby" ? state.players.map((p) => p.id).join(",") : null;
+  const seenLobby = useRef<string[] | null>(null);
+  useEffect(() => {
+    if (lobbyIds === null) {
+      seenLobby.current = null;
+      return;
+    }
+    const ids = lobbyIds ? lobbyIds.split(",") : [];
+    const prev = seenLobby.current;
+    seenLobby.current = ids;
+    if (hasNewcomer(prev, ids)) playSound("lb-01", { isHost });
+  }, [lobbyIds, isHost]);
 
   // 단계 전환 효과음 (TRANSITION_CUES)
   const seen = useRef<{ gameId: string; phase: string } | null>(null);
