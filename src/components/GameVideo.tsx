@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readItem, writeItem } from "@/lib/session-item";
 import { isOn, onSettingsChange } from "@/lib/settings";
+import { onNextTap } from "@/lib/tap";
 import { playedKey, videoHasSound, videoSrc, type VideoId } from "@/lib/video";
 
 type Status = "playing" | "seen" | "skipped" | "failed";
@@ -60,6 +61,7 @@ export function GameVideo({
     const v = ref.current;
     if (!v) return;
     let cancelled = false;
+    let offTap = () => {};
     const hasSound = () => videoHasSound(id, { isHost, soundOn: isOn("sound") });
     // 음소거로 틀고 있다가 화면을 한 번 누르면 소리를 켠다 (sound.md 규칙 6 "첫 탭에서 소리 열기").
     // 모바일은 누르는 순간 안에서 켜야 하므로 여기서 바로 바꾼다
@@ -76,14 +78,14 @@ export function GameVideo({
         setBlocked(true);
         v.muted = true;
         v.play().catch(() => !cancelled && fail());
-        document.addEventListener("pointerdown", unlock, { once: true });
+        offTap = onNextTap(unlock);
         return;
       }
       if (!(e instanceof DOMException && e.name === "AbortError")) fail();
     });
     return () => {
       cancelled = true;
-      document.removeEventListener("pointerdown", unlock);
+      offTap();
     };
     // 처음 한 번만 튼다. 소리는 아래 effect 가 따른다
     // eslint-disable-next-line react-hooks/exhaustive-deps

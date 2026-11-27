@@ -6,6 +6,7 @@
 // - BGM/앰비언스는 한 번에 하나. 바뀔 때 앞 것을 줄이고 다음 것을 키운다 (sound.md §1 끝)
 // 누가 내는지는 sound-cues.ts 의 SOUND_TARGET 표를 따른다 (host 방장 폰만, self 그 폰만, all 모든 폰)
 import { isOn, onSettingsChange } from "@/lib/settings";
+import { onTap } from "@/lib/tap";
 import { FADE_S, loopEndSeconds, shouldPlay, volumeFor, type SoundId } from "@/lib/sound-cues";
 
 let ctx: AudioContext | null = null;
@@ -29,8 +30,6 @@ function loopEnd(buffer: AudioBuffer): number {
   }
   return end;
 }
-// iOS Safari 는 pointerdown 으로는 AudioContext 가 안 열리는 경우가 있어 셋을 같이 듣는다
-const TAP_EVENTS = ["pointerdown", "touchend", "click"] as const;
 
 function context(): AudioContext | null {
   if (ctx) return ctx;
@@ -100,19 +99,19 @@ function stop(p: Playing, fade: boolean) {
 export function listenFirstTap() {
   if (listening || typeof window === "undefined") return;
   listening = true;
-  const open = () => {
+  // 열릴 때까지 탭마다 다시 시도한다
+  const off = onTap(() => {
     const c = context();
     if (!c) return;
     void c
       .resume()
       .then(() => {
         if (!unlocked()) return;
-        for (const e of TAP_EVENTS) window.removeEventListener(e, open, true);
+        off();
         applyLayer(); // 열리기 전에 정해 둔 BGM 을 이제 튼다
       })
       .catch(() => {});
-  };
-  for (const e of TAP_EVENTS) window.addEventListener(e, open, true);
+  });
   onSettingsChange(() => {
     if (isOn("sound")) return applyLayer();
     stopAll();
