@@ -10,6 +10,7 @@ import { Button } from "@/components/Button";
 import { GameScreen } from "@/components/game";
 import { ErrorLine, Screen } from "@/components/Screen";
 import { useMine } from "@/lib/use-mine";
+import { useRoomSound } from "@/lib/use-room-sound";
 import { useRoomState } from "@/lib/use-room-state";
 import { leaveRoom } from "@/server/actions/leave-room";
 import { startGame } from "@/server/actions/start-game";
@@ -31,6 +32,7 @@ export function RoomView({ title }: { title: string }) {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
   const { state, error: loadError, reload: load, remainingMs } = useRoomState(code);
+  useRoomSound(state, remainingMs); // 단계에 따라 나는 소리. 누가 낼지는 sound-cues.ts SOUND_TARGET (#100)
   const game = state?.status === "lobby" ? null : (state?.game ?? null);
   // r2, r3 에는 유령의 속삭임이 신호 없이 오므로 주기적으로도 다시 읽는다 (ghost.ts whisper).
   // 유령 본인은 속삭임을 받지 않으니 다시 읽지 않는다 (자기 동작 뒤에는 reload 로 다시 읽는다, PR #49 리뷰)
