@@ -9,9 +9,11 @@ import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { GameScreen } from "@/components/game";
 import { ErrorLine, Screen } from "@/components/Screen";
+import { readItem } from "@/lib/session-item";
 import { useMine } from "@/lib/use-mine";
 import { useRoomSound } from "@/lib/use-room-sound";
 import { useRoomState } from "@/lib/use-room-state";
+import { playedKey } from "@/lib/video";
 import { leaveRoom } from "@/server/actions/leave-room";
 import { startGame } from "@/server/actions/start-game";
 import type { RoomState } from "@/server/rooms/core";
@@ -32,8 +34,13 @@ export function RoomView({ title }: { title: string }) {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
   const { state, error: loadError, reload: load, remainingMs } = useRoomState(code);
-  useRoomSound(state, remainingMs); // 단계에 따라 나는 소리. 누가 낼지는 sound-cues.ts SOUND_TARGET (#100)
   const game = state?.status === "lobby" ? null : (state?.game ?? null);
+  // V-01 이 끝난 판. 새로 고침 뒤에는 GameVideo 가 이미 본 영상을 다시 틀지 않고 알리지도 않아 저장소로 안다 (#112)
+  const [openingEndedFor, setOpeningEndedFor] = useState<string | null>(null);
+  const openingVideoDone =
+    !!game && (openingEndedFor === game.id || readItem(playedKey(game.id, "v-01")) !== null);
+  // 단계에 따라 나는 소리. 누가 낼지는 sound-cues.ts SOUND_TARGET (#100)
+  useRoomSound(state, remainingMs, openingVideoDone);
   // r2, r3 에는 유령의 속삭임이 신호 없이 오므로 주기적으로도 다시 읽는다 (ghost.ts whisper).
   // 유령 본인은 속삭임을 받지 않으니 다시 읽지 않는다 (자기 동작 뒤에는 reload 로 다시 읽는다, PR #49 리뷰)
   const isGhost = !!game?.ghost && game.ghost.playerId === state?.me.playerId;
@@ -87,7 +94,16 @@ export function RoomView({ title }: { title: string }) {
 
   switch (game.phase) {
     case "intro":
-      return <Opening key={game.id} game={game} isHost={state.me.isHost} top={top} reload={load} />;
+      return (
+        <Opening
+          key={game.id}
+          game={game}
+          isHost={state.me.isHost}
+          top={top}
+          reload={load}
+          onVideoEnded={() => setOpeningEndedFor(game.id)}
+        />
+      );
     case "secret":
       return <CharacterCard key={game.id} game={game} mine={mine} top={top} reload={load} />;
     case "r1":

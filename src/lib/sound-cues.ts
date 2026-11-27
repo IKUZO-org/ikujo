@@ -178,7 +178,7 @@ export const SOUND_TARGET: Record<SoundId, SoundTarget> = {
 
 // ---- 표를 읽는 함수 --------------------------------------------------------------
 
-/** 지금 깔아 둘 BGM/앰비언스 하나. 없으면 null. `openingVideoDone` 은 V-01 끝남 신호 자리 (지금은 true) */
+/** 지금 깔아 둘 BGM/앰비언스 하나. 없으면 null. `openingVideoDone` 은 V-01 이 끝났거나 건너뛴 뒤 true */
 export function pickLayer(
   phase: string | null,
   remainingMs: number | null,

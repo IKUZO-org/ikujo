@@ -46,11 +46,14 @@ export function Opening({
   isHost,
   top,
   reload,
+  onVideoEnded,
 }: {
   game: GameState;
   isHost: boolean;
   top: ReactNode;
   reload: () => Promise<void>;
+  /** V-01 이 끝났거나 못 틀어 건너뛰었을 때. OP-02 BGM 은 그 뒤부터 (sound.md 1.1, #112) */
+  onVideoEnded: () => void;
 }) {
   const [i, setI] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -71,12 +74,12 @@ export function Opening({
 
   // 소리 자리 (sound.md 1.1). playSound(#99)가 머지되면 GameVideo 의 onEnded 로 붙인다:
   // - V-01 이 나오는 동안 OP-05(정전), OP-06(폭풍, 파도)은 내지 않는다. 영상 안 소리를 쓴다
-  // - 영상이 끝나면("ended") OP-08(긴장 스팅) → OP-04(메신저 알림음). OP-02(BGM)는 단계 소리(#99)가 맡는다
+  // - 영상이 끝나면("ended") OP-08(긴장 스팅) → OP-04(메신저 알림음). OP-02(BGM)는 onVideoEnded 뒤 useRoomSound 가 깐다
   // - 영상을 못 틀면("skipped") op-05.mp3 를 대신 쓴다
   return (
     <GameScreen
       top={top}
-      graphic={<GameVideo id="v-01" gameId={game.id} isHost={isHost} />}
+      graphic={<GameVideo id="v-01" gameId={game.id} isHost={isHost} onEnded={onVideoEnded} />}
       bottom={
         <>
           <ErrorLine message={error} />

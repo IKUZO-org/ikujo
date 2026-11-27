@@ -7,11 +7,14 @@ import { listenFirstTap, playSound, setLayer } from "@/lib/sound";
 import { LAST_SECONDS_MS, phaseCues, pickLayer } from "@/lib/sound-cues";
 import type { RoomState } from "@/server/rooms/core";
 
-// OP-02 는 V-01 이 끝나고 OP-08 뒤부터다 (sound.md 1.1). V-01 재생은 따로 만든다.
-// 그 전까지는 오프닝 진입 때 바로 튼다. V-01 이 생기면 영상이 끝난 신호로 이 값을 바꾼다 (#100)
-const OPENING_VIDEO_DONE = true;
-
-export function useRoomSound(state: RoomState | null, remainingMs: number | null) {
+/**
+ * `openingVideoDone`: 이 판의 V-01 이 끝났거나 못 틀어 건너뛰었는가. OP-02 는 그 뒤부터 깐다 (sound.md 1.1, #112)
+ */
+export function useRoomSound(
+  state: RoomState | null,
+  remainingMs: number | null,
+  openingVideoDone: boolean,
+) {
   const isHost = !!state?.me.isHost;
   const game = state?.status === "lobby" ? null : (state?.game ?? null);
   const gameId = game?.id ?? null;
@@ -20,7 +23,7 @@ export function useRoomSound(state: RoomState | null, remainingMs: number | null
   useEffect(() => listenFirstTap(), []);
 
   // 깔아 둘 BGM/앰비언스. 바뀔 때만 setLayer 가 실제로 바꾼다
-  const layer = pickLayer(phase, remainingMs, OPENING_VIDEO_DONE);
+  const layer = pickLayer(phase, remainingMs, openingVideoDone);
   useEffect(() => setLayer(layer, isHost), [layer, isHost]);
   useEffect(() => () => setLayer(null, false), []);
 
