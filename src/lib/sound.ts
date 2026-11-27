@@ -5,7 +5,7 @@
 // - 설정에서 소리를 끄면 내지 않고, 끄는 순간 깔린 BGM 도 멈춘다
 // - BGM/앰비언스는 한 번에 하나. 바뀔 때 앞 것을 줄이고 다음 것을 키운다 (sound.md §1 끝)
 // 누가 내는지는 sound-cues.ts 의 SOUND_TARGET 표를 따른다 (host 방장 폰만, self 그 폰만, all 모든 폰)
-import { isOn, SETTINGS_EVENT } from "@/lib/settings";
+import { isOn, onSettingsChange } from "@/lib/settings";
 import { FADE_S, loopEndSeconds, shouldPlay, volumeFor, type SoundId } from "@/lib/sound-cues";
 
 let ctx: AudioContext | null = null;
@@ -113,7 +113,7 @@ export function listenFirstTap() {
       .catch(() => {});
   };
   for (const e of TAP_EVENTS) window.addEventListener(e, open, true);
-  window.addEventListener(SETTINGS_EVENT, () => {
+  onSettingsChange(() => {
     if (isOn("sound")) return applyLayer();
     stopAll();
   });
