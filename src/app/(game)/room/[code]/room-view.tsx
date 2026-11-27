@@ -10,6 +10,7 @@ import { Button } from "@/components/Button";
 import { GameScreen } from "@/components/game";
 import { ErrorLine, Screen } from "@/components/Screen";
 import { readItem } from "@/lib/session-item";
+import { playSound } from "@/lib/sound";
 import { useMine } from "@/lib/use-mine";
 import { useRoomSound } from "@/lib/use-room-sound";
 import { useRoomState } from "@/lib/use-room-state";
@@ -227,6 +228,7 @@ function Lobby({
     startTransition(async () => {
       const r = await startGame({ roomId: state.roomId });
       if ("error" in r) setError(r.error);
+      else playSound("lb-02", { isHost: state.me.isHost }); // 방장이 시작 누름 (sound.md LB-02)
       await reload();
     });
   }

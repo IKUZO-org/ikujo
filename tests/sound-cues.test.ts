@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { BG_TAIL_MS, loopEndSeconds, PHASE_LAYER, pickLayer, shouldPlay } from "@/lib/sound-cues";
+import {
+  BG_TAIL_MS,
+  hasNewcomer,
+  loopEndSeconds,
+  PHASE_LAYER,
+  pickLayer,
+  shouldPlay,
+} from "@/lib/sound-cues";
 
 describe("pickLayer (sound.md §1, #100)", () => {
   it("V-01 이 끝나기 전 오프닝과 단계가 없을 때는 깔지 않는다", () => {
@@ -25,5 +32,13 @@ describe("loopEndSeconds", () => {
 describe("shouldPlay", () => {
   it("host 소리는 방장 폰에서만 난다 (규칙 1)", () => {
     expect([shouldPlay("rd-01", true), shouldPlay("rd-01", false)]).toEqual([true, false]);
+  });
+});
+
+describe("hasNewcomer (LB-01)", () => {
+  it("처음 읽은 목록과 나가기만 한 목록에서는 울리지 않는다", () => {
+    expect(hasNewcomer(null, ["a", "b"])).toBe(false);
+    expect(hasNewcomer(["a", "b"], ["a"])).toBe(false);
+    expect(hasNewcomer(["a"], ["a", "b"])).toBe(true);
   });
 });

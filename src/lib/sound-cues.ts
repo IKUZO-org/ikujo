@@ -199,6 +199,13 @@ export function volumeFor(id: SoundId): number {
   return SOUND_VOLUME[id];
 }
 
+/** 대기실 참가자 목록에 전에 없던 사람이 생겼는가 (LB-01 누가 들어옴). 처음 읽은 목록(prev null)은 아니다 */
+export function hasNewcomer(prev: readonly string[] | null, next: readonly string[]): boolean {
+  if (!prev) return false;
+  const before = new Set(prev);
+  return next.some((id) => !before.has(id));
+}
+
 /** 단계가 prev → next 로 바뀔 때 낼 효과음과 시각 */
 export function phaseCues(prev: string, next: string): Cue[] {
   return TRANSITION_CUES[`${prev}>${next}` as `${Phase}>${Phase}`] ?? [];
