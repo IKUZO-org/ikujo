@@ -1,6 +1,7 @@
 // 로컬 Supabase(`supabase start`)에 붙는 테스트 도우미.
 // 키는 로컬 개발용 값이라 `supabase status` 에서 그때그때 읽는다. 원격 키를 쓰지 않는다.
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 type LocalEnv = { url: string; anonKey: string; serviceRoleKey: string };
@@ -57,4 +58,20 @@ export async function insert<T>(
   const { data, error } = await db.from(table).insert(rows).select();
   if (error) throw new Error(`${table} 넣기 실패: ${error.message}`);
   return data as T[];
+}
+
+// supabase CLI 의 DB 컨테이너 이름은 supabase_db_<project_id>. SUPABASE_DB_CONTAINER 로 덮을 수 있다
+export function dbContainer(): string {
+  if (process.env.SUPABASE_DB_CONTAINER) return process.env.SUPABASE_DB_CONTAINER;
+  const config = readFileSync("supabase/config.jsonc", "utf8");
+  const id = config.match(/^\s*"project_id":\s*"([^"]+)"/m)?.[1];
+  if (!id) throw new Error("supabase/config.jsonc 에서 project_id 를 찾지 못했어요.");
+  return `supabase_db_${id}`;
+}
+
+// postgres 로 SQL 한 줄을 돌리고 결과를 글자로 돌려준다
+export function psql(query: string): string {
+  return execFileSync("docker", ["exec", dbContainer(), "psql", "-U", "postgres", "-Atc", query], {
+    encoding: "utf8",
+  }).trim();
 }
