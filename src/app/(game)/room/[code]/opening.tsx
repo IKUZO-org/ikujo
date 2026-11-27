@@ -4,15 +4,21 @@
 // TTS 는 쓰지 않는다(D-024): 글로만. 그래픽 영역에는 오프닝 영상 V-01 을 튼다 (FR-081, #101).
 // 영상이 없거나 못 틀어도 글만으로 진행된다 (PRD §24).
 // "다음"은 각자. 마지막에서 ready(intro). 모두 누르거나 3분이 지나면 서버가 S-08 로 넘긴다 (spec S-07)
-import { useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { Chip, GameScreen } from "@/components/game";
 import { GameVideo } from "@/components/GameVideo";
 import { ErrorLine } from "@/components/Screen";
+import { playSound } from "@/lib/sound";
+import { readItem } from "@/lib/session-item";
+import { markOpeningDone, playedKey } from "@/lib/video";
 import { ready } from "@/server/actions/phase";
 import type { GameState } from "@/server/rooms/core";
 
 type Beat = { title: string; body: ReactNode };
+
+// V-01 뒤 소리 (sound.md 1.1): OP-08 스팅(2초) 다음에 OP-04 알림음과 OP-02 BGM. 못 틀면 OP-05(2초) 다음에 OP-02
+const AFTER_STING_MS = 2000;
 
 // 제목은 한 줄(약 15자), 보조는 한두 줄 (DESIGN.md §1, §5)
 const BEATS: Beat[] = [
@@ -69,14 +75,31 @@ export function Opening({
     });
   }
 
-  // 소리 자리 (sound.md 1.1). playSound(#99)가 머지되면 GameVideo 의 onEnded 로 붙인다:
-  // - V-01 이 나오는 동안 OP-05(정전), OP-06(폭풍, 파도)은 내지 않는다. 영상 안 소리를 쓴다
-  // - 영상이 끝나면("ended") OP-08(긴장 스팅) → OP-04(메신저 알림음). OP-02(BGM)는 단계 소리(#99)가 맡는다
-  // - 영상을 못 틀면("skipped") op-05.mp3 를 대신 쓴다
+  // 소리 (sound.md 1.1, 모두 방장 폰만. SOUND_TARGET 표가 정한다):
+  // - V-01 이 나오는 동안 OP-05(정전), OP-06(폭풍, 파도), OP-02(BGM)는 내지 않는다. 영상 안 소리를 쓴다
+  // - 영상이 끝나면 OP-08(긴장 스팅) → OP-04(메신저 알림음). 그때부터 OP-02 (markOpeningDone → use-room-sound)
+  // - 영상을 못 틀면 op-05.mp3 를 대신 내고, 그 뒤 OP-02
+  // 화면이 사라지면(인물 카드로 넘어감) 아직 안 낸 소리는 내지 않는다. 인물 카드에서는 단계 소리가 OP-02 를 깐다
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    // 영상을 이미 끝까지 본 뒤 새로 고쳤으면 기다리지 않고 OP-02 로
+    if (readItem(playedKey(game.id, "v-01")) !== null) markOpeningDone(game.id);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [game.id]);
+  function videoDone(how: "ended" | "skipped") {
+    playSound(how === "ended" ? "op-08" : "op-05", { isHost });
+    timer.current = setTimeout(() => {
+      if (how === "ended") playSound("op-04", { isHost });
+      markOpeningDone(game.id);
+    }, AFTER_STING_MS);
+  }
+
   return (
     <GameScreen
       top={top}
-      graphic={<GameVideo id="v-01" gameId={game.id} isHost={isHost} />}
+      graphic={<GameVideo id="v-01" gameId={game.id} isHost={isHost} onEnded={videoDone} />}
       bottom={
         <>
           <ErrorLine message={error} />

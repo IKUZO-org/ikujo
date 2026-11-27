@@ -15,6 +15,8 @@ let layer: { id: SoundId; playing: Playing | null } | null = null;
 let wantedLayer: SoundId | null = null;
 const effects = new Set<Playing>();
 let listening = false;
+// 첫 탭으로 소리를 여는 중. 그 탭이 곧바로 낸 소리(카드 열기 CH-01 등)는 열린 뒤에 낸다 (#110)
+let opening: Promise<void> | null = null;
 // 반복 BGM 파일 끝에 무음(최대 8초쯤)이 있어 그대로 돌리면 긴 텀이 생긴다. 버퍼마다 소리 끝을 한 번 구해 둔다 (#100)
 const loopEnds = new WeakMap<AudioBuffer, number>();
 
@@ -103,7 +105,7 @@ export function listenFirstTap() {
   const open = () => {
     const c = context();
     if (!c) return;
-    void c
+    opening = c
       .resume()
       .then(() => {
         if (!unlocked()) return;
@@ -141,15 +143,20 @@ export function playSound(id: SoundId, opts: { isHost: boolean; loop?: boolean }
     }
   };
   if (!shouldPlay(id, opts.isHost)) return cancel;
-  if (!isOn("sound") || !unlocked()) return cancel;
-  void load(id).then((buffer) => {
-    if (!buffer || cancelled || !isOn("sound")) return;
-    const p = start(buffer, volumeFor(id), !!opts.loop, false);
-    if (!p) return;
-    playing = p;
-    effects.add(p);
-    p.source.onended = () => effects.delete(p);
-  });
+  if (!isOn("sound")) return cancel;
+  // 열리는 중이면 열린 뒤에. 아직 아무도 누르지 않았으면 내지 않는다
+  const ready = unlocked() ? Promise.resolve() : opening;
+  if (!ready) return cancel;
+  void ready
+    .then(() => (cancelled || !unlocked() ? null : load(id)))
+    .then((buffer) => {
+      if (!buffer || cancelled || !isOn("sound")) return;
+      const p = start(buffer, volumeFor(id), !!opts.loop, false);
+      if (!p) return;
+      playing = p;
+      effects.add(p);
+      p.source.onended = () => effects.delete(p);
+    });
   return cancel;
 }
 

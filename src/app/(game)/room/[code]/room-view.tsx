@@ -45,7 +45,7 @@ export function RoomView({ title }: { title: string }) {
   );
 
   // r2 이후 덮는 화면(속보, 녹화 끊김, 출몰). 라운드 단계에서만 그린다
-  const ghostCover = useGhostCover(game, isGhost);
+  const ghostCover = useGhostCover(game, isGhost, !!state?.me.isHost);
 
   if (loadError) {
     // 방장이 해설에서 홈으로(endRoom)를 누르면 방이 닫혀 다시 읽기가 "없는 방"이 된다.
@@ -89,7 +89,16 @@ export function RoomView({ title }: { title: string }) {
     case "intro":
       return <Opening key={game.id} game={game} isHost={state.me.isHost} top={top} reload={load} />;
     case "secret":
-      return <CharacterCard key={game.id} game={game} mine={mine} top={top} reload={load} />;
+      return (
+        <CharacterCard
+          key={game.id}
+          game={game}
+          mine={mine}
+          isHost={state.me.isHost}
+          top={top}
+          reload={load}
+        />
+      );
     case "r1":
     case "r2":
     case "r3": {
