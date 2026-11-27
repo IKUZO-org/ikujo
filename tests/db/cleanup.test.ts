@@ -1,27 +1,11 @@
 // 하루 한 번 정리 작업 (009_cleanup.sql, data §6, D-019, D-026, D-027). 로컬 Supabase 필요
 // 함수는 앱 역할이 부를 수 없어 postgres 로 부른다. 시각은 이 테스트가 만든 줄만 과거로 바꾼다.
-import { execFileSync, spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { spawn } from "node:child_process";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { guest, insert, localEnv, serviceClient } from "./local-supabase";
+import { dbContainer, guest, insert, localEnv, psql, serviceClient } from "./local-supabase";
 
 type Row = Record<string, unknown> & { id: string };
-
-// supabase CLI 의 DB 컨테이너 이름은 supabase_db_<project_id>. SUPABASE_DB_CONTAINER 로 덮을 수 있다
-function dbContainer(): string {
-  if (process.env.SUPABASE_DB_CONTAINER) return process.env.SUPABASE_DB_CONTAINER;
-  const config = readFileSync("supabase/config.jsonc", "utf8");
-  const id = config.match(/^\s*"project_id":\s*"([^"]+)"/m)?.[1];
-  if (!id) throw new Error("supabase/config.jsonc 에서 project_id 를 찾지 못했어요.");
-  return `supabase_db_${id}`;
-}
-
-function psql(query: string): string {
-  return execFileSync("docker", ["exec", dbContainer(), "psql", "-U", "postgres", "-Atc", query], {
-    encoding: "utf8",
-  }).trim();
-}
 
 // 두 번째 연결에서 트랜잭션을 연다. 끝나면 resolve
 function holdTx(sql: string): Promise<void> {
