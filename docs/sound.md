@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 | --- | --- |
 | 담당 | 종원 (소리) |
-| 상태 | P0, P1 파일과 진행 BGM 2개 넣음 (2026-11-26, 4번 표). 오프닝 영상 V-01과 겹치는 자리 정함 (2026-11-26, 1.1). 나머지는 찾으면서 고친다 |
+| 상태 | P0, P1, P2 파일과 진행 BGM 2개 넣음 (P0, P1 2026-11-26, P2 2026-11-27, 4번 표). 오프닝 영상 V-01과 겹치는 자리 정함 (2026-11-26, 1.1). 나머지는 찾으면서 고친다 |
 | 근거 | PRD FR-080, FR-081, NFR-006, NFR-007, §11, §28 · 기능명세 S-05~S-14 · `scenarios/live-death.json` |
 | 로드맵 | M2 소리 목록 → M3 소리 넣을 자리(개발) → M4 소리 갈아 끼우기 |
 
@@ -179,8 +179,14 @@ OP-04(메신저 알림음)는 그대로 둔다.
 | GH-03 | `gh-03.mp3` | ewspr_20 (artfwo) | https://freesound.org/s/120673/ | CC0 | 종원 |
 | VT-03 | `vt-03.mp3` | Dissonant Piano Sting 5 (nomiqbomi) | https://freesound.org/s/578356/ | CC0 | 종원 |
 | RV-03 | `rv-03.mp3` | Somber Piano Chord Progression D 76bpm (CVLTIV8R) | https://freesound.org/s/807111/ | CC0 | 종원 |
+| LB-01 | `lb-01.mp3` | Notification Ding (Qvantor) | https://freesound.org/s/879783/ | CC0 | 종원 |
+| OP-01 | `op-01.mp3` | Dark Voice Drone 02 - Loop (kkenny101) | https://freesound.org/s/872936/ | CC0 | 종원 |
+| CL-01 | `cl-01.mp3` | Walkie Talkie Beep (SoundBiterSFX) | https://freesound.org/s/732209/ | CC0 | 종원 |
+| GH-02 | `gh-02.mp3` | Textured Low Drone 02 - Loop (kkenny101) | https://freesound.org/s/871510/ | CC0 | 종원 |
+| VT-02 | `vt-02.mp3` | UI Button Press Deep (Qvantor). 밝은 알림음 대신 낮은 소리로 | https://freesound.org/s/878235/ | CC0 | 종원 |
+| RV-04 | `rv-04.mp3` | Magazine Page (mosaichorse) | https://freesound.org/s/437121/ | CC0 | 종원 |
 
-P0는 모두 있다 (OP-03, OP-08 내레이션은 TTS 없이 글로 정함, 2번). P1도 모두 있다 (R2-03은 목소리 없이 글로, OP-07은 뺌). P2는 다음에 찾는다.
+P0는 모두 있다 (OP-03, OP-08 내레이션은 TTS 없이 글로 정함, 2번). P1도 모두 있다 (R2-03은 목소리 없이 글로, OP-07은 뺌). P2도 모두 있다 (2026-11-27).
 
 ## 5. 정할 것
 - ~~OQ-011 목소리~~: TTS 없이 자막과 글로 정함 (2026-11-26, 위 2번). PRD에서 닫을 차례
