@@ -29,8 +29,20 @@ export function isOn(name: Toggle): boolean {
   return read(KEYS[name]) !== "off";
 }
 
+// 설정을 바꾸면 이미 나오고 있는 영상, 소리도 바로 따르게 알린다 (#101)
+const listeners = new Set<() => void>();
+
 export function setOn(name: Toggle, on: boolean) {
   write(KEYS[name], on ? "on" : "off");
+  for (const l of listeners) l();
+}
+
+/** 설정이 바뀔 때마다 부른다. 돌려준 함수로 그만 듣는다 (useSyncExternalStore 의 subscribe 모양) */
+export function onSettingsChange(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function hasSeenOnboarding(): boolean {
