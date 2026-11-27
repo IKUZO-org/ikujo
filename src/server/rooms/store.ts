@@ -1,0 +1,178 @@
+// 방 동작이 DB에 바라는 것. 실제는 supabase-store.ts (service role), 테스트는 가짜 저장소.
+// 동시에 눌러도 깨지지 않게 하는 마지막 방어선은 DB 제약이다 (001_core.sql):
+//   진행 중 방 코드 unique, (room_id, seat) unique, (room_id, user_id) unique, seat 1~6.
+// 제약에 걸리면 UniqueViolation 을 던진다. 입장은 DB 함수 join_room 이 방 줄을 잠가 차례로 한다.
+
+export type RoomStatus = "lobby" | "playing" | "ended";
+
+export type RoomRow = {
+  id: string;
+  code: string;
+  status: RoomStatus;
+  hostPlayerId: string | null;
+};
+
+export type PlayerRow = {
+  id: string;
+  roomId: string;
+  userId: string;
+  isGuest: boolean;
+  nickname: string;
+  seat: number;
+  leftAt: string | null;
+};
+
+export type GameRow = {
+  id: string;
+  phase: string;
+  phaseEndsAt: string | null;
+};
+
+/** 내 배정 한 줄 (data §2 assignments). 본인 요청(getMine)에만 쓴다 */
+export type AssignmentRow = {
+  characterId: string;
+  secretId: string;
+  alibiId: string;
+  isCulprit: boolean;
+  clueIds: Partial<Record<"r1" | "r2" | "r3", string[]>>;
+  /** r2 부터 희생자만 true (data §2, FR-050) */
+  isGhost: boolean;
+};
+
+/** 유령의 속삭임, 출몰 한 줄 (data §2 ghost_actions). 속삭임은 서버 안에서 당사자 것만 골라 돌려준다 */
+export type GhostActionRow = {
+  id: string;
+  kind: "whisper" | "haunt";
+  fromPlayerId: string;
+  /** whisper 만 */
+  toPlayerId: string | null;
+  round: number;
+  body: string;
+};
+
+export type NewGame = {
+  roomId: string;
+  playerCount: number;
+  phase: "intro";
+  phaseEndsAt: string;
+  assignmentSource: "rule" | "ai";
+  secret: {
+    culpritPlayerId: string;
+    victimPlayerId: string;
+    culpritCharacter: string;
+    ghostTrait: string;
+    /** AI 응답 원문과 검사 실패 원인 (data §2). 규칙 배정만 했으면 null */
+    llmRaw: unknown;
+  };
+  assignments: {
+    playerId: string;
+    characterId: string;
+    secretId: string;
+    alibiId: string;
+    isCulprit: boolean;
+    /** 개인 단서 { r1: [...], r2: [...], r3: [...] } (data §2 assignments.clue_ids) */
+    clueIds: Record<"r1" | "r2" | "r3", string[]>;
+  }[];
+};
+
+// haunt: 판에 출몰 1번 (AC-053), whisper: 라운드당 속삭임 1번 (OQ-005, 005_ghost.sql)
+export type UniqueTarget = "code" | "seat" | "user" | "haunt" | "whisper";
+
+export class UniqueViolation extends Error {
+  constructor(readonly target: UniqueTarget) {
+    super(`unique violation: ${target}`);
+  }
+}
+
+export type GameEnd = {
+  outcome?: "caught" | "aired_off";
+  endedReason: "normal" | "culprit_left" | "cancelled" | "stale";
+};
+
+export type JoinResult =
+  | { result: "not_found" }
+  | {
+      result: "member" | "rejoined" | "need_nickname" | "joined" | "started" | "full";
+      roomId: string;
+      code: string;
+    };
+
+export interface RoomStore {
+  /** status 가 ended 가 아닌 방 중 이 코드 */
+  findActiveRoomByCode(code: string): Promise<RoomRow | null>;
+  getRoom(roomId: string): Promise<RoomRow | null>;
+  /** 코드가 진행 중 방과 겹치면 UniqueViolation('code') */
+  insertRoom(code: string): Promise<RoomRow>;
+  setHost(roomId: string, playerId: string | null): Promise<void>;
+  /** 지금 상태가 from 일 때만 바꾼다. 바꿨으면 true (두 번 시작 막기) */
+  updateRoomStatus(roomId: string, from: RoomStatus, to: RoomStatus): Promise<boolean>;
+
+  /** seat 순서 */
+  listPlayers(roomId: string): Promise<PlayerRow[]>;
+  /** seat 겹침은 UniqueViolation('seat'), 같은 사람 두 번은 UniqueViolation('user') */
+  insertPlayer(p: Omit<PlayerRow, "id" | "leftAt">): Promise<PlayerRow>;
+  deletePlayer(playerId: string): Promise<void>;
+  setPlayerLeftAt(playerId: string, leftAt: string | null): Promise<void>;
+
+  /**
+   * 코드로 방에 들어가기 (DB 함수 join_room, 004_join_room.sql). 방 줄을 잠그고 한 번에 한다.
+   * nickname 이 null 이면 들어갈 수 있는지만 본다.
+   */
+  joinRoom(p: {
+    code: string;
+    userId: string;
+    isGuest: boolean;
+    nickname: string | null;
+  }): Promise<JoinResult>;
+
+  /** games + game_secrets + assignments. 중간에 실패하면 만든 것을 지우고 던진다 */
+  createGame(game: NewGame): Promise<GameRow>;
+  latestGame(roomId: string): Promise<GameRow | null>;
+  /** 판과 그 판의 방 id */
+  getGame(gameId: string): Promise<(GameRow & { roomId: string }) | null>;
+  /** 이 판에서 공용으로 열린 단서 (data §2 revealed_clues) */
+  listRevealedClues(gameId: string): Promise<{ clueId: string; round: number }[]>;
+  /** 이 단계에서 준비/확인/다음을 누른 플레이어 id (data §2 readies) */
+  listReadyPlayerIds(gameId: string, phase: string): Promise<string[]>;
+  /**
+   * 투표 단계의 공용 정보 재료 (spec S-11). round 1 투표, 2 재투표.
+   * 누가 누구를 찍었는지는 돌려주지 않는다 (AC-060)
+   */
+  getVoteInfo(
+    gameId: string,
+    round: 1 | 2,
+  ): Promise<{ votedPlayerIds: string[]; revoteCandidates: string[] }>;
+  /**
+   * 투표한 뒤 나갔다가 돌아와서 아직 바꿀 수 있는 내 표의 대상 (D-022). 바꿀 수 없으면 null.
+   * 기준은 game-vote.ts changeVoteAfterRejoin 과 같다: votes.at < players.rejoined_at
+   */
+  getChangeableVote(gameId: string, round: 1 | 2, playerId: string): Promise<string | null>;
+  /** 이 판에 배정된 player id. 그 판 참가자를 셀 때 쓴다 (다시 하기 전 판에 나간 사람은 없다, D-023) */
+  listAssignedPlayerIds(gameId: string): Promise<string[]>;
+  /** 한 사람의 배정. 본인 확인은 부르는 쪽(getMine)이 한다 */
+  getAssignment(gameId: string, playerId: string): Promise<AssignmentRow | null>;
+
+  /** 유령이 된 플레이어 (assignments.is_ghost). r2 전에는 null */
+  getGhost(gameId: string): Promise<{ playerId: string; characterId: string } | null>;
+  /** 이번 판 범인의 특징 id (game_secrets.ghost_trait). 유령 본인 요청에만 쓴다 */
+  getGhostTrait(gameId: string): Promise<string | null>;
+  /** 이번 판 범인 인물 ID (game_secrets.culprit_character). 다시 하기의 배정 입력에만 쓴다 (spec §5-2) */
+  getCulpritCharacter(gameId: string): Promise<string | null>;
+  /** 이번 판 범인 player id (game_secrets.culprit_player_id). 범인 이탈 확인에만 쓴다 (D-025) */
+  getCulpritPlayerId(gameId: string): Promise<string | null>;
+  /**
+   * 판 단계가 from 일 때만 바꾼다. 바꿨으면 true (다시 하기, 방 끝내기를 두 번 눌러도 한 번만).
+   * end: 범인 이탈로 끝낼 때 games.outcome, ended_reason (D-025)
+   */
+  updateGamePhase(gameId: string, from: string, to: string, end?: GameEnd): Promise<boolean>;
+  /** 이 판의 속삭임, 출몰. 누구에게 보여 줄지는 부르는 쪽이 고른다 */
+  listGhostActions(gameId: string): Promise<GhostActionRow[]>;
+  /** 출몰 두 번은 UniqueViolation('haunt'), 같은 라운드 속삭임 두 번은 UniqueViolation('whisper') */
+  insertGhostAction(a: { gameId: string } & Omit<GhostActionRow, "id">): Promise<void>;
+
+  /** 기록 (spec §7). 개인 식별 정보는 넣지 않는다 (data §6) */
+  logEvent(
+    name: string,
+    props: { roomId?: string; gameId?: string; [k: string]: unknown },
+  ): Promise<void>;
+}

@@ -1,0 +1,25 @@
+# 비밀 값: 절대 커밋하지 않는다 (.env.example 만 예외, 값 없이)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Next.js
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# Supabase 로컬
+supabase/.temp/
+supabase/.branches/
+
+# 기타
+.DS_Store
+npm-debug.log*
+coverage/
+.claude/settings.local.json

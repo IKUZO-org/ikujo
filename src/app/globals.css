@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/*
+ * 토큰 (DESIGN.md §5). 이름과 값은 DESIGN.md 표와 같게 둔다.
+ * 코드는 이 토큰으로만 색, 글자, 간격을 쓴다. 값을 바꿀 때는 DESIGN.md 를 먼저 고친다.
+ */
+@theme {
+  /* 색: UI는 검정, 아이보리, 레드(그래픽 팔레트 A안 Vermilion) */
+  --color-bg: #0b0b0b;
+  --color-surface: #242220;
+  --color-text: #f2ebdc;
+  --color-text-muted: #9a9488;
+  --color-primary: #bf3026;
+  --color-private-bg: #bf3026;
+  --color-danger: #eb6f5e;
+  --color-border: #3a3833;
+
+  /* 글자 */
+  --font-body:
+    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --text-sm: 12px;
+  --text-sm--line-height: 1.5;
+  --text-md: 14px;
+  --text-md--line-height: 1.5;
+  --text-lg: 16px;
+  --text-lg--line-height: 1.4;
+  --text-xl: 22px;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 30px;
+  --text-2xl--line-height: 1.15;
+
+  /* 간격 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* 모서리, 그림자 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-full: 9999px;
+  --shadow-overlay: 0 -4px 24px rgb(0 0 0 / 0.6);
+
+  /* 움직임 */
+  --duration-fast: 120ms;
+  --duration-base: 240ms;
+}
+
+/* 어두운 화면 하나만 쓴다 (DESIGN.md §5) */
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--text-md--line-height);
+}
