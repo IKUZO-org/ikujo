@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readItem, writeItem } from "@/lib/session-item";
 import { isOn, onSettingsChange } from "@/lib/settings";
-import { playedKey, videoHasSound, videoSrc, type VideoId } from "@/lib/video";
+import { playedKey, VIDEO_VOLUME, videoHasSound, videoSrc, type VideoId } from "@/lib/video";
 
 type Status = "playing" | "seen" | "skipped" | "failed";
 
@@ -68,6 +68,7 @@ export function GameVideo({
       v.muted = !hasSound();
       setBlocked(false);
     };
+    v.volume = VIDEO_VOLUME; // 앱 소리보다 작게 (R-13)
     v.muted = !hasSound();
     v.play().catch((e: unknown) => {
       if (cancelled) return;
