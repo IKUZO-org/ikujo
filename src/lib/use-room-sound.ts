@@ -2,19 +2,16 @@
 // 단계가 바뀔 때 나는 소리를 고르고 튼다 (docs/sound.md §1, #100).
 // 누가 낼지는 sound-cues.ts 의 SOUND_TARGET 표가 정한다. 방장이 바뀌면(BR-012) 새 방장 폰이 지금 단계 BGM 을 이어 튼다.
 // 단계 전환 효과음은 이 폰이 전환을 직접 본 때만 낸다: 새로 고침, 재접속 뒤 처음 읽은 단계에는 BGM 만 다시 깐다
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { listenFirstTap, playSound, setLayer } from "@/lib/sound";
 import { hasNewcomer, LAST_SECONDS_MS, phaseCues, pickLayer } from "@/lib/sound-cues";
+import { isOpeningDone, onOpeningDone } from "@/lib/video";
 import type { RoomState } from "@/server/rooms/core";
 
-/**
- * `openingVideoDone`: 이 판의 V-01 이 끝났거나 못 틀어 건너뛰었는가. OP-02 는 그 뒤부터 깐다 (sound.md 1.1, #112)
- */
-export function useRoomSound(
-  state: RoomState | null,
-  remainingMs: number | null,
-  openingVideoDone: boolean,
-) {
+// OP-02 는 V-01 이 끝나고 OP-08 뒤부터다 (sound.md 1.1). 오프닝 화면이 영상이 끝나면(못 틀면 바로) 신호를 준다 (#110)
+const serverOpeningDone = () => false;
+
+export function useRoomSound(state: RoomState | null, remainingMs: number | null) {
   const isHost = !!state?.me.isHost;
   const game = state?.status === "lobby" ? null : (state?.game ?? null);
   const gameId = game?.id ?? null;
@@ -22,8 +19,14 @@ export function useRoomSound(
 
   useEffect(() => listenFirstTap(), []);
 
+  const openingDone = useSyncExternalStore(
+    onOpeningDone,
+    () => gameId !== null && isOpeningDone(gameId),
+    serverOpeningDone,
+  );
+
   // 깔아 둘 BGM/앰비언스. 바뀔 때만 setLayer 가 실제로 바꾼다
-  const layer = pickLayer(phase, remainingMs, openingVideoDone);
+  const layer = pickLayer(phase, remainingMs, openingDone);
   useEffect(() => setLayer(layer, isHost), [layer, isHost]);
   useEffect(() => () => setLayer(null, false), []);
 

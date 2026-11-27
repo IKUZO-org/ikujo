@@ -81,20 +81,20 @@
 - 유령 창은 라운드 화면이 아니라 V-02, V-03 을 보지 않고, V-05 도 유령 본인 창에는 뜨지 않는다 (원래 있던 동작)
 - 저장소를 못 쓰는 브라우저에서는 소리 끄기가 영상에 반영되지 않을 수 있다 (`isOn` 이 기본값을 돌려줌). 설정 저장 방식과 같이 정할 일
 - 영상 포스터 이미지가 없다 (RULES §3 "첫 프레임 포스터 이미지를 같이"). 받으면 `poster` 로 붙인다
-- 사용량이 0 으로 나옴: Windows 에서 `usage.mjs` 가 0 을 내는 문제(#41, PR #90) 때문으로 보임. 머지되면 다시 돌려 바꾼다
+- 사용량: 처음에는 Windows 에서 0 으로 나왔다(#41). #90 머지 뒤 #110 브랜치에서 `--branch roohyeon/feat-101-game-video` 로 다시 돌려 바꿈
 
 ## 사용량
 `node scripts/usage.mjs --md` 로 만든 값 (2026-11-27). 비용은 정가 기준 추정, 사용률 %는 계정 전체 값이라 다른 작업도 섞인다
 
 | 항목 | 값 |
 | --- | --- |
-| 비용 | 모름 (비용 기록 없음) (세션 0개) |
-| 토큰 | 입력 0 · 출력 0 · 캐시 쓰기 0 · 캐시 읽기 0 |
-| 메시지 | 0 (메인 0, 서브에이전트 0) |
-| 모델 | 없음 |
-| 사용률 | 기록 없음 (상태줄 사용률이 켜진 뒤부터 남는다) |
-| 많이 쓴 도구 | 없음 |
-| skill | 없음 |
+| 비용 | 모름 (비용 기록 없음) (세션 1개) |
+| 토큰 | 입력 182 · 출력 75.2k · 캐시 쓰기 156.9k · 캐시 읽기 20.0M |
+| 메시지 | 80 (메인 80, 서브에이전트 0) |
+| 모델 | claude-opus-5-5 80 |
+| 사용률 | 5시간 0% → 13% · 주간 47% → 58% |
+| 많이 쓴 도구 | Bash 68, Edit 11, Read 7, Write 6, Skill 1 |
+| skill | worklog 1 |
 | 에이전트 | 없음 |
 
-<!-- usage {"branch":"roohyeon/feat-101-game-video","issue":101,"sessions":0,"messages":0,"first":null,"last":null,"tokens":{"input":0,"output":0,"cacheWrite":0,"cacheRead":0},"costUSD":null,"where":{"main":{"messages":0,"output":0},"subagent":{"messages":0,"output":0}},"models":{},"tools":{},"skills":{},"agents":{},"rate":null} -->
+<!-- usage {"branch":"roohyeon/feat-101-game-video","issue":101,"sessions":1,"messages":80,"first":"2026-11-27","last":"2026-11-27","tokens":{"input":182,"output":75242,"cacheWrite":156917,"cacheRead":20026632},"costUSD":null,"where":{"main":{"messages":80,"output":75242},"subagent":{"messages":0,"output":0}},"models":{"claude-opus-5-5":{"messages":80,"output":75242}},"tools":{"Bash":68,"Write":6,"Edit":11,"Read":7,"Skill":1},"skills":{"worklog":1},"agents":{},"rate":{"five_hour":{"from":0,"to":13},"seven_day":{"from":47,"to":58}}} -->
