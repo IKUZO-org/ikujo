@@ -4,7 +4,7 @@
 | --- | --- |
 | 날짜 | 2026-11-27 |
 | 정한 사람 | 신(PO), Claude와 브레인스토밍 |
-| 상태 | `제안` 설계. 확정되면 Hatch PRD §28(원본)에 옮기고, `scenarios/live-death.json`에 반영한다 |
+| 상태 | `확정` (PO 2026-11-27). Hatch PRD 8판 §28에 옮김 (D-028~D-031). 다음은 `scenarios/live-death.json` 반영 |
 | 계기 | 11/27 QA 6번(시나리오 구성 확인), 7번(인물의 정확한 이름, "○○○ PD"처럼) |
 | 근거 | PRD §28, BR-004, BR-006, OQ-013, `scenarios/live-death.json` v1 |
 
