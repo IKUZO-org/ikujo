@@ -129,7 +129,8 @@ export function Round({
             disabled={pending || game.ready.mine}
             count={{ n: game.ready.count, of: game.ready.total }}
           >
-            {game.ready.mine ? "준비했어요" : "준비 완료"}
+            {/* 누른 뒤에는 "토론 중": 상단 "라운드 N · 토론 중"과 같이 바뀐다 (QA #136) */}
+            {game.ready.mine ? "토론 중" : "준비 완료"}
           </Button>
         </>
       }

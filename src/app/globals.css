@@ -17,8 +17,8 @@
 
   /* 글자 */
   --font-body:
-    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
-    "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Malgun Gothic", sans-serif;
   --text-sm: 12px;
   --text-sm--line-height: 1.5;
   --text-md: 14px;
@@ -49,6 +49,22 @@
   --duration-base: 240ms;
 }
 
+/* 단계가 바뀌어 화면이 새로 뜰 때 글과 버튼이 툭 바뀌지 않게 살짝 나타난다 (QA #136).
+   움직임 줄이기 설정이면 끈다 (DESIGN.md §7) */
+@keyframes screen-enter {
+  from {
+    opacity: 0;
+  }
+}
+.screen-enter {
+  animation: screen-enter var(--duration-base) ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen-enter {
+    animation: none;
+  }
+}
+
 /* 어두운 화면 하나만 쓴다 (DESIGN.md §5) */
 html {
   color-scheme: dark;
@@ -60,4 +76,9 @@ body {
   font-family: var(--font-body);
   font-size: var(--text-md);
   line-height: var(--text-md--line-height);
+  /* 한글은 어절(띄어쓰기) 단위로 줄을 바꾼다. 띄어쓰기 없이 긴 글은 넘치지 않게 그 안에서 끊는다.
+     마지막 줄에 한 글자만 남지 않게 pretty (QA #136) */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
 }
