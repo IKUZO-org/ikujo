@@ -49,22 +49,26 @@ export async function assignedPlayerIds(db: SupabaseClient, gameId: string): Pro
 }
 
 export async function loadGameForMember(db: SupabaseClient, gameId: string, userId: string) {
-  const { data: game } = await db
-    .from("games")
-    .select("id, room_id, phase, phase_ends_at, revote_candidates")
-    .eq("id", gameId)
-    .maybeSingle<GameRow>();
+  // 판, 내 참가자 줄, 이 판 배정을 한 번에 읽는다 (#135). 내 줄은 판의 방에 있고 나가지 않은 것만 쓴다
+  const [{ data: game }, { data: mine }, assigned] = await Promise.all([
+    db
+      .from("games")
+      .select("id, room_id, phase, phase_ends_at, revote_candidates")
+      .eq("id", gameId)
+      .maybeSingle<GameRow>(),
+    db
+      .from("players")
+      .select("id, room_id")
+      .eq("user_id", userId)
+      .is("left_at", null)
+      .returns<{ id: string; room_id: string }[]>(),
+    assignedPlayerIds(db, gameId),
+  ]);
   if (!game) return null;
-  const { data: player } = await db
-    .from("players")
-    .select("id")
-    .eq("room_id", game.room_id)
-    .eq("user_id", userId)
-    .is("left_at", null)
-    .maybeSingle<{ id: string }>();
+  const player = (mine ?? []).find((p) => p.room_id === game.room_id);
   if (!player) return null;
   // 이 판에 배정이 없으면(다시 하기 뒤에 돌아온 사람) 이 판의 동작은 못 한다
-  if (!(await assignedPlayerIds(db, gameId)).includes(player.id)) return null;
+  if (!assigned.includes(player.id)) return null;
   return { game, playerId: player.id };
 }
 
@@ -145,13 +149,20 @@ export async function advancePhase(
   gameId: string,
   from: Phase,
   now: Date = new Date(),
+  // markReady 가 이미 읽은 판과 준비 수. 있으면 다시 읽지 않는다 (#135)
+  loaded?: { game: GameRow; counts: { ready: number; total: number } },
 ): Promise<PhaseResult> {
   const serverNow = now.toISOString();
-  const found = await loadGameForMember(db, gameId, userId);
-  if (!found) return { error: "이 판의 참가자가 아니에요." };
-  const { game } = found;
+  let game: GameRow;
+  if (loaded) {
+    game = loaded.game;
+  } else {
+    const found = await loadGameForMember(db, gameId, userId);
+    if (!found) return { error: "이 판의 참가자가 아니에요." };
+    game = found.game;
+  }
 
-  const { ready, total } = await readyCounts(db, game, game.phase);
+  const { ready, total } = loaded?.counts ?? (await readyCounts(db, game, game.phase));
   const decision = canAdvance({
     current: game.phase,
     from,
@@ -337,8 +348,16 @@ export async function markReady(
   if (error) return { error: "준비를 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요." };
 
   const { ready, total } = await readyCounts(db, game, phase);
-  await broadcast(db, game.room_id, { type: "count", ready });
-  // 모두 눌렀으면 그 자리에서 넘긴다. 넘길지는 canAdvance 가 정한다 (r1~r3 은 시간 전엔 안 넘어감, OQ-007)
-  if (total > 0 && ready >= total) await advancePhase(db, userId, gameId, phase, now);
+  // 모두 눌렀으면 그 자리에서 넘긴다. 넘길지는 canAdvance 가 정한다 (r1~r3 은 시간 전엔 안 넘어감, OQ-007).
+  // 넘겼으면 phase 신호로 충분해서 count 신호는 넘기지 못했을 때만 보낸다 (#135)
+  let advanced = false;
+  if (total > 0 && ready >= total) {
+    const r = await advancePhase(db, userId, gameId, phase, now, {
+      game,
+      counts: { ready, total },
+    });
+    advanced = "ok" in r && r.advanced;
+  }
+  if (!advanced) await broadcast(db, game.room_id, { type: "count", ready });
   return { ok: true, ready, total, serverNow };
 }
