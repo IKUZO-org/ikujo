@@ -42,6 +42,11 @@ export function Reveal({
   const seq = useRef(0);
   const stung = useRef(false); // 엔딩 소리를 이 화면에서 이미 냈는가
 
+  // 마지막 "홈으로"가 바로 뜨게 홈을 미리 받아 둔다 (QA #136)
+  useEffect(() => {
+    router.prefetch("/");
+  }, [router]);
+
   // 방 상태를 다시 읽을 때마다(신호 "reveal" 포함) 같이 다시 읽는다: 카드 8이 뒤늦게 채워진다
   useEffect(() => {
     const my = ++seq.current;
@@ -85,7 +90,8 @@ export function Reveal({
       const since = performance.now();
       const r = await run();
       if ("error" in r) return setError(r.error);
-      after?.();
+      // 다른 화면으로 떠나면(홈으로) 방을 다시 읽지 않는다. 다시 읽기를 기다리느라 홈이 늦게 떴다 (QA #136)
+      if (after) return after();
       await reload(since);
     });
   }
