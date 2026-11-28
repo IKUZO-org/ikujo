@@ -4,12 +4,14 @@
 // TTS 는 쓰지 않는다(D-024): 글로만. 그래픽 영역에는 오프닝 영상 V-01 을 튼다 (FR-081, #101).
 // 영상이 없거나 못 틀어도 글만으로 진행된다 (PRD §24).
 // "다음"은 각자. 마지막에서 ready(intro). 모두 누르거나 3분이 지나면 서버가 S-08 로 넘긴다 (spec S-07)
+// 영상과 장면(점, 글)은 같이 간다 (#141): 영상이 흐르면 컷 시각에 맞춰 장면이 넘어가고, "다음"을 먼저 누르면 영상이 그 장면으로 건너뛴다
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { Chip, GameScreen } from "@/components/game";
 import { GameVideo } from "@/components/GameVideo";
 import { ErrorLine } from "@/components/Screen";
 import { playSound } from "@/lib/sound";
+import { beatAt, OPENING_BEAT_STARTS } from "@/lib/opening-beats";
 import { readItem } from "@/lib/session-item";
 import { markOpeningDone, playedKey } from "@/lib/video";
 import { ready } from "@/server/actions/phase";
@@ -58,15 +60,31 @@ export function Opening({
   top: ReactNode;
   reload: (since?: number) => Promise<void>;
 }) {
-  const [i, setI] = useState(0);
+  // 영상을 이미 끝까지 본 뒤 새로 고쳤으면 영상은 마지막 장면에 멈춰 있으므로 글도 마지막 장면부터 (#141).
+  // 방 화면은 방 상태를 읽은 뒤 브라우저에서만 그려져서 처음부터 저장소를 읽어도 된다 (GameVideo 와 같음)
+  const [i, setI] = useState(() =>
+    readItem(playedKey(game.id, "v-01")) !== null ? BEATS.length - 1 : 0,
+  );
+  // "다음"으로 넘긴 장면의 영상 시각. 영상도 그 장면으로 건너뛴다 (#141)
+  const [seekTo, setSeekTo] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const done = game.ready.mine;
   const last = i === BEATS.length - 1;
   const beat = BEATS[done ? BEATS.length - 1 : i];
 
+  // 영상이 흐르면 장면 점과 글도 V-01 컷 시각에 맞춰 넘어간다 (#141). 뒤로는 돌아가지 않는다
+  function onVideoTime(seconds: number) {
+    const at = beatAt(seconds);
+    setI((cur) => Math.max(cur, at));
+  }
+
   function next() {
-    if (!last) return setI(i + 1);
+    if (!last) {
+      // 영상을 못 틀었거나 이미 봤으면 GameVideo 가 건너뛰기를 무시하고, 글만 넘어간다 (PRD §24)
+      setSeekTo(OPENING_BEAT_STARTS[i + 1]);
+      return setI(i + 1);
+    }
     setError(null);
     startTransition(async () => {
       const since = performance.now();
@@ -100,7 +118,16 @@ export function Opening({
   return (
     <GameScreen
       top={top}
-      graphic={<GameVideo id="v-01" gameId={game.id} isHost={isHost} onEnded={videoDone} />}
+      graphic={
+        <GameVideo
+          id="v-01"
+          gameId={game.id}
+          isHost={isHost}
+          onEnded={videoDone}
+          onTime={onVideoTime}
+          seekTo={seekTo}
+        />
+      }
       bottom={
         <>
           <ErrorLine message={error} />
