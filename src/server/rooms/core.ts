@@ -379,7 +379,7 @@ export type GameState = {
   /** 지금까지 공용으로 열린 단서 (FR-041). 열린 순서 */
   publicClues: { id: string; round: number; text: string }[];
   /**
-   * r2 부터: 유령이 된 희생자 (FR-050). 속보 "○○, 해변에서 쓰러진 채 발견" 에 인물 이름을 쓰고,
+   * r2 부터: 유령이 된 희생자 (FR-050). 속보 "○○, 거실에서 갑자기 쓰러져 의식 없음" (D-029) 에 인물 이름을 쓰고,
    * 투표(단계 9)에서 고르는 사람과 대상에서 뺄 때 playerId 를 쓴다 (AC-053). r2 전에는 null
    */
   ghost: { playerId: string; name: string } | null;

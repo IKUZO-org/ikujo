@@ -63,7 +63,7 @@ describe("writePersonal", () => {
     };
     expect(await writePersonal(scenario, failing, "{}")).toBeNull();
     const body = buildReveal(scenario, input);
-    expect(body.culprit.who.character).toBe("국민 호감 1위");
+    expect(body.culprit.who.character).toBe(scenario.characters.find((c) => c.id === "fav")!.name);
     expect(body.timeline).toHaveLength(scenario.timeline.length);
     expect(body.redHerrings).toHaveLength(scenario.redHerrings.length);
     expect(body.ghost.matches.map((w) => w.nickname)).toEqual(["A"]);

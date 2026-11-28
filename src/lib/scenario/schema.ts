@@ -32,11 +32,17 @@ export const clueSchema = z
     // 이 단서가 가리키는 범인 후보
     pointsTo: z.array(id).optional(),
     redHerring: z.boolean().optional(),
+    // 알리바이 퍼즐 증거 (D-032): 이 인물이 이 판에 있고 범인이 아닐 때만 나온다
+    clears: z.array(id).min(1).optional(),
     text,
   })
   .refine((c) => (c.visibility === "private") === (c.for !== undefined), {
     message: "개인 단서에만 for 가 있다",
     path: ["for"],
+  })
+  .refine((c) => c.clears === undefined || c.visibility === "private", {
+    message: "증거(clears)는 개인 단서만",
+    path: ["clears"],
   });
 
 export const scenarioSchema = z.object({

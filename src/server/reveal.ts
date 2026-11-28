@@ -79,8 +79,9 @@ export function buildReveal(scenario: Scenario, input: RevealInput): RevealBody 
 
   // 시나리오에 "의미" 설명 글이 없어 특징 글과 해당 인물로만 만든다
   const trait = scenario.traits.find((t) => t.id === input.ghostTrait);
+  // 유령은 자기 자신을 스칠 수 없다 (D-030 으로 특징을 나눠 가진 인물이 늘어 유령도 해당할 수 있다)
   const matches = input.players
-    .filter((p) => trait?.characters.includes(p.characterId))
+    .filter((p) => !p.isGhost && trait?.characters.includes(p.characterId))
     .flatMap((p) => who(p.id) ?? []);
   const ghost = input.players.find((p) => p.isGhost);
 

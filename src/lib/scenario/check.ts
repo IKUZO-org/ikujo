@@ -96,6 +96,16 @@ export function checkScenario(input: unknown): ScenarioCheck {
     for (const f of c.for ?? []) char(f, `clues ${c.id} for`);
     for (const p of c.pointsTo ?? []) char(p, `clues ${c.id} pointsTo`);
     if (!rounds.has(c.round)) errors.push(`없는 라운드: ${c.round} (clues ${c.id})`);
+    for (const x of c.clears ?? []) {
+      char(x, `clues ${c.id} clears`);
+      if (c.for?.includes(x)) errors.push(`증거를 본인이 받음: ${c.id} (${x})`);
+    }
+  }
+
+  // 알리바이 퍼즐 (D-032): 모든 인물은 범인이 아닐 때 정전 10분의 증거가 있다.
+  // 없으면 그 사람은 범인이 아닌 판에도 "아무도 못 본 사람"으로 남아 퍼즐이 안 풀린다
+  for (const c of s.characters) {
+    if (!s.clues.some((x) => x.clears?.includes(c.id))) errors.push(`증거 없음: ${c.id}`);
   }
   for (const r of s.redHerrings) {
     char(r.suspect, `redHerrings ${r.clue}`);
