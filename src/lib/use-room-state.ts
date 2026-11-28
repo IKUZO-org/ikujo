@@ -18,6 +18,8 @@ export function useRoomState(code: string) {
   const [state, setState] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [offsetMs, setOffsetMs] = useState(0);
+  // 다시 읽어 받은 횟수. count 신호로 수만 바꿀 때는 그대로라 getMine 을 다시 부르지 않는다 (#135)
+  const [version, setVersion] = useState(0);
   const [now, setNow] = useState(0); // 폰 시각. 읽을 때와 1초마다 바꾼다
 
   const alive = useRef(true);
@@ -34,9 +36,11 @@ export function useRoomState(code: string) {
     setOffsetMs(clockOffsetMs(r.serverNow, phoneNow));
     setNow(phoneNow);
     setState(r.state);
+    setVersion((v) => v + 1);
   }, [code]);
   const reading: CoalesceSlot = useRef({ inflight: null, dirty: false });
-  const reload = useCallback(() => runCoalesced(reading, load), [load]);
+  // since 를 주면 액션 뒤 다시 읽기: 액션 뒤에 출발한 읽기에는 합류만 한다 (#135, coalesce.ts)
+  const reload = useCallback((since?: number) => runCoalesced(reading, load, since), [load]);
 
   useEffect(() => {
     alive.current = true;
@@ -98,7 +102,7 @@ export function useRoomState(code: string) {
     return () => clearInterval(id);
   }, [gameId, phase, endsAt, offsetMs, reload]);
 
-  return { state, error, remainingMs, reload };
+  return { state, version, error, remainingMs, reload };
 }
 
 /** count 신호의 준비 수(ready)나 투표 수(votes)만 바꾼다. 내가 눌렀는지 등은 다음 읽기에서 바뀐다 */

@@ -47,7 +47,7 @@ export function Round({
   /** false 면 라운드 영상을 아직 틀지 않는다 (덮는 화면이 떠 있음) */
   videoReady?: boolean;
   top: ReactNode;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   // 고른 탭은 이 판, 이 라운드 동안 기억한다: 새로 고쳐도 그 탭으로 (AC-NFR-002, #44).
   // 라운드가 바뀌면 key 가 달라 "모두의 단서"부터 (새 공용 단서를 먼저 보게)
@@ -77,9 +77,10 @@ export function Round({
   function markReady() {
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await ready(game.id, game.phase);
       if ("error" in r) setError(r.error);
-      await reload();
+      await reload(since);
     });
   }
 

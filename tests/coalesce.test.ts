@@ -45,3 +45,45 @@ describe("coalesce (#135)", () => {
     expect(runs).toBe(2);
   });
 });
+
+describe("액션 뒤 다시 읽기 합류 (#135)", () => {
+  function setup() {
+    let runs = 0;
+    const gates: (() => void)[] = [];
+    const slot = { current: { inflight: null, dirty: false } };
+    const read = (since?: number) =>
+      runCoalesced(
+        slot,
+        () =>
+          new Promise<void>((done) => {
+            runs++;
+            gates.push(done);
+          }),
+        since,
+      );
+    const flush = () => new Promise((r) => setTimeout(r, 0));
+    return { read, gates, flush, runs: () => runs };
+  }
+
+  it("액션 중에 출발한 읽기에는 합류만 해서 1번 읽는다", async () => {
+    const t = setup();
+    const since = performance.now();
+    const signal = t.read();
+    const after = t.read(since);
+    t.gates[0]();
+    await Promise.all([signal, after]);
+    expect(t.runs()).toBe(1);
+  });
+
+  it("액션 전에 출발한 읽기면 끝난 뒤 한 번 더 읽는다", async () => {
+    const t = setup();
+    const before = t.read();
+    await new Promise((r) => setTimeout(r, 2));
+    const after = t.read(performance.now());
+    t.gates[0]();
+    await t.flush();
+    t.gates[1]();
+    await Promise.all([before, after]);
+    expect(t.runs()).toBe(2);
+  });
+});

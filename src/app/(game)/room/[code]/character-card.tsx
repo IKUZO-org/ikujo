@@ -24,7 +24,7 @@ export function CharacterCard({
   mine: MineState | null;
   isHost: boolean;
   top: ReactNode;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   const { open, cover } = usePrivateReveal();
   const [error, setError] = useState<string | null>(null);
@@ -39,9 +39,10 @@ export function CharacterCard({
   function confirm() {
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await ready(game.id, "secret");
       if ("error" in r) setError(r.error);
-      await reload();
+      await reload(since);
     });
   }
 

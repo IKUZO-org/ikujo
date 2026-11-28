@@ -56,7 +56,7 @@ export function Opening({
   game: GameState;
   isHost: boolean;
   top: ReactNode;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   const [i, setI] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -69,9 +69,10 @@ export function Opening({
     if (!last) return setI(i + 1);
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await ready(game.id, "intro");
       if ("error" in r) setError(r.error);
-      await reload();
+      await reload(since);
     });
   }
 

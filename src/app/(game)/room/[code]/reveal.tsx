@@ -32,7 +32,7 @@ export function Reveal({
   gameId: string;
   state: RoomState;
   top: ReactNode;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   const router = useRouter();
   const [data, setData] = useState<Loaded | null>(null);
@@ -82,10 +82,11 @@ export function Reveal({
   function act(run: () => Promise<{ error: string } | { ok: true }>, after?: () => void) {
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await run();
       if ("error" in r) return setError(r.error);
       after?.();
-      await reload();
+      await reload(since);
     });
   }
 
