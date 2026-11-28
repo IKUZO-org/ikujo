@@ -3,6 +3,7 @@
 // 다시 읽는 때: 화면을 열 때, room:{roomId} 신호를 받을 때(count 는 빼고), 남은 시간이 0 이 될 때.
 // 0 이 되면 advance 를 부르고 다시 읽는다. 단계를 실제로 넘길지는 서버가 정한다.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { applyCount } from "@/lib/apply-count";
 import { runCoalesced, type CoalesceSlot } from "@/lib/coalesce";
 import { clockOffsetMs, remainingMs as calcRemaining } from "@/lib/room-clock";
 import { roomChannel, SIGNAL_EVENT, type RoomSignal } from "@/lib/realtime";
@@ -103,20 +104,4 @@ export function useRoomState(code: string) {
   }, [gameId, phase, endsAt, offsetMs, reload]);
 
   return { state, version, error, remainingMs, reload };
-}
-
-/** count 신호의 준비 수(ready)나 투표 수(votes)만 바꾼다. 내가 눌렀는지 등은 다음 읽기에서 바뀐다 */
-function applyCount(
-  state: RoomState | null,
-  signal: Extract<RoomSignal, { type: "count" }>,
-): RoomState | null {
-  const game = state?.game;
-  if (!state || !game) return state;
-  if (signal.ready !== undefined) {
-    return { ...state, game: { ...game, ready: { ...game.ready, count: signal.ready } } };
-  }
-  if (signal.votes !== undefined && game.vote) {
-    return { ...state, game: { ...game, vote: { ...game.vote, count: signal.votes } } };
-  }
-  return state;
 }
