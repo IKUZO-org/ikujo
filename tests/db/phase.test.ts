@@ -6,7 +6,6 @@ import { advancePhase, markReady } from "@/server/game-phase";
 import type { RoomSignal } from "@/lib/realtime";
 import { guest, insert, serviceClient } from "./local-supabase";
 
-// 보낸 신호를 모은다 (#135)
 const sent = vi.hoisted(() => [] as { roomId: string; signal: unknown }[]);
 vi.mock("@/server/realtime", () => ({
   broadcast: async (_db: unknown, roomId: string, signal: unknown) => {

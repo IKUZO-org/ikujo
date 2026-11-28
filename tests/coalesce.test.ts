@@ -30,7 +30,6 @@ describe("coalesce (#135)", () => {
     gates[1]();
     await Promise.all([first, second, third]);
     expect(runs).toBe(2);
-    // 끝난 뒤 부르면 새로 돈다
     void call();
     expect(runs).toBe(3);
   });
