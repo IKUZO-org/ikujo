@@ -1,5 +1,6 @@
 "use client";
 // S-02 홈: 방 만들기 / 코드 입력. 처음 연 사람에게는 온보딩(S-01)을 먼저 덮어 띄운다. 입장 오류는 spec S-02 표 문구 그대로 (AC-011)
+// 그 앞에 켤 때마다 로고 랜딩 2초 (#146, docs 에 없는 화면을 요청에 따라 더함)
 // 위쪽 그래픽 영역에 키 비주얼과 로고 (DESIGN.md §3, ART.md §10, #126). 그림을 못 불러와도 검정 바탕 그대로 동작한다 (PRD §24)
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -7,6 +8,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/Button";
 import { ErrorLine, Screen } from "@/components/Screen";
 import { FirstOnboarding } from "@/components/settings";
+import { Splash } from "@/components/splash";
 import { joinRoom } from "@/server/actions/join-room";
 
 export function HomeView() {
@@ -39,6 +41,8 @@ export function HomeView() {
       }
     >
       <FirstOnboarding />
+      {/* 켤 때마다 로고 2초 (#146). 온보딩보다 위에 덮고, 닫히면 온보딩이나 홈이 보인다 */}
+      <Splash />
       {/* 그래픽 영역: 남는 높이를 다 쓰고 화면 양옆까지 채운다. 그림은 가운데 기준으로 위아래만 잘린다 (ART.md §11) */}
       <div className="relative -mx-(--space-4) -mt-(--space-6) min-h-60 flex-1 overflow-hidden bg-(--color-bg)">
         {!visualFailed && (
