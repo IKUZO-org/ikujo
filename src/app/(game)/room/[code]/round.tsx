@@ -12,7 +12,7 @@
 // 범인 폰이 라운드 시작 때 조용할 때가 많고, 소리는 옆 사람도 들어 범인이 드러날 수 있다 (BR-001, sound.md 규칙 4)
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
-import { Card, Chip, GameScreen, NewBadge, Tabs, usePrivateReveal } from "@/components/game";
+import { Card, Chip, GameScreen, NewBadge, Tabs, Toast, usePrivateReveal } from "@/components/game";
 import { GameVideo } from "@/components/GameVideo";
 import { ErrorLine } from "@/components/Screen";
 import { readItem, writeItem } from "@/lib/session-item";
@@ -38,6 +38,8 @@ export function Round({
   mine,
   isHost,
   videoReady = true,
+  talking = false,
+  toast = false,
   top,
   reload,
 }: {
@@ -46,6 +48,10 @@ export function Round({
   isHost: boolean;
   /** false 면 라운드 영상을 아직 틀지 않는다 (덮는 화면이 떠 있음) */
   videoReady?: boolean;
+  /** 모두 준비하고 토스트가 사라졌는지. 버튼이 "토론 중" (#138) */
+  talking?: boolean;
+  /** 모두 준비한 순간 3초: 버튼 바로 위에 "이제 이야기를 나눠 보세요" (#138) */
+  toast?: boolean;
   top: ReactNode;
   reload: () => Promise<void>;
 }) {
@@ -124,14 +130,18 @@ export function Round({
               {n < 3 ? "시간이 끝나면 다음 라운드로 넘어가요" : "시간이 끝나면 투표로 넘어가요"}
             </p>
           )}
-          <Button
-            onClick={markReady}
-            disabled={pending || game.ready.mine}
-            count={{ n: game.ready.count, of: game.ready.total }}
-          >
-            {/* 누른 뒤에는 "토론 중": 상단 "라운드 N · 토론 중"과 같이 바뀐다 (QA #136) */}
-            {game.ready.mine ? "토론 중" : "준비 완료"}
-          </Button>
+          {/* 토스트는 버튼 바로 위에 겹쳐 뜬다 (#138) */}
+          <div className="relative">
+            {toast && <Toast>이제 이야기를 나눠 보세요</Toast>}
+            <Button
+              onClick={markReady}
+              disabled={pending || game.ready.mine}
+              count={{ n: game.ready.count, of: game.ready.total }}
+            >
+              {/* 누르면 "준비했어요", 모두 누르고 토스트가 사라지면 상단과 같이 "토론 중" (#138) */}
+              {talking ? "토론 중" : game.ready.mine ? "준비했어요" : "준비 완료"}
+            </Button>
+          </div>
         </>
       }
     >

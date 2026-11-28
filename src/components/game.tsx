@@ -165,6 +165,26 @@ export function Chip({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * 잠깐 떴다 사라지는 알림 (§6 Toast 모양): surface 면, radius-md, text-md, shadow-overlay.
+ * 자리: §6 은 "상단 바 바로 아래"지만, 라운드의 "이제 이야기를 나눠 보세요"는 요청에 따라 주요 버튼 바로 위에 띄운다 (#138).
+ * 부르는 쪽의 relative 상자 위쪽 바깥에 겹쳐 뜬다 (아래 글과 버튼을 밀지 않게).
+ * 언제 없앨지는 부르는 쪽이 정한다 (3초). 누르는 것을 막지 않는다
+ */
+export function Toast({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="screen-enter pointer-events-none absolute inset-x-0 bottom-full z-30 mb-(--space-2) flex justify-center"
+    >
+      <p className="rounded-(--radius-md) bg-(--color-surface) px-(--space-4) py-(--space-3) text-center text-(length:--text-md) font-bold text-(--color-text) shadow-(--shadow-overlay)">
+        {children}
+      </p>
+    </div>
+  );
+}
+
 // 시트, 덮는 화면 -------------------------------------------------------------------
 
 /**
