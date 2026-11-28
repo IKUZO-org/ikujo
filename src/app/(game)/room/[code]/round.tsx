@@ -26,6 +26,11 @@ import type { VideoId } from "@/lib/video";
 // 라운드 영상. R1 숙소 거실은 영상이 없다 (video PLAN.md §1)
 const ROUND_VIDEO: Partial<Record<GameState["phase"], VideoId>> = { r2: "v-02", r3: "v-03" };
 
+// 라운드 영상은 그래픽 영역을 꽉 채운다(cover). 기본은 ART.md §12, RULES.md §3 대로 통째로 보이기(contain, #106)가 맞고,
+// 라운드 2, 3만 예외로 조정했다: 단서 글 때문에 영역이 납작해 contain 이면 영상이 너무 작아진다 (#143).
+// R3 원본은 세로 47% 기준으로 잘라 가운데보다 위쪽(고리, 출연진)이 조금 더 보이게 한다. R2 는 가운데
+const ROUND_VIDEO_POSITION: Partial<Record<GameState["phase"], string>> = { r3: "50% 47%" };
+
 // 공용 단서는 라운드가 시작될 때 열린다. 시작 전환음(RD-05 → RD-01 → R2-01/R3-01, 약 4초)이 끝난 뒤 RD-03 을 낸다
 const PUBLIC_CLUE_SOUND_MS = 4000;
 
@@ -106,7 +111,13 @@ export function Round({
     return () => clearTimeout(t);
   }, [isHost, hasPublicNow, game.id, game.phase]);
   const publicGraphic = video && videoReady && (
-    <GameVideo id={video} gameId={game.id} isHost={isHost} />
+    <GameVideo
+      id={video}
+      gameId={game.id}
+      isHost={isHost}
+      fit="cover"
+      position={ROUND_VIDEO_POSITION[game.phase]}
+    />
   );
   const graphic = tab === "mine" ? (showMine ? undefined : reveal.cover) : publicGraphic;
 
