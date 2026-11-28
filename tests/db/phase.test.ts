@@ -153,7 +153,9 @@ describe("markReady", () => {
     const { data } = await db.from("games").select("phase").eq("id", g).single();
     expect(data?.phase).toBe("r1");
     // 넘기지 못했으면 count 신호는 그대로 보낸다
-    expect(sent.map((x) => x.signal)).toEqual([{ type: "count", ready: 4 }]);
+    expect(sent.map((x) => x.signal)).toEqual([
+      { type: "count", gameId: g, phase: "r1", ready: 4 },
+    ]);
   });
 
   it("r2 에서 유령은 분모와 누른 수에서 빠진다 (#53)", async () => {

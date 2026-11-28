@@ -93,7 +93,7 @@ export async function castVote(
     const r = await advancePhase(db, userId, gameId, phase, now);
     advanced = "ok" in r && r.advanced;
   }
-  if (!advanced) await broadcast(db, game.room_id, { type: "count", votes });
+  if (!advanced) await broadcast(db, game.room_id, { type: "count", gameId, phase, votes });
   return { ok: true, votes, total };
 }
 

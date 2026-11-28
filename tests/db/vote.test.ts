@@ -106,7 +106,9 @@ describe("castVote", () => {
     const g = await newGame();
     sent.length = 0;
     for (const i of [0, 1, 2]) await cast(g, i, 0);
-    expect(sent).toEqual([1, 2, 3].map((votes) => ({ type: "count", votes })));
+    expect(sent).toEqual(
+      [1, 2, 3].map((votes) => ({ type: "count", gameId: g, phase: "vote", votes })),
+    );
     sent.length = 0;
     await cast(g, 3, 0);
     expect(sent.map((x) => x.type)).toEqual(["phase"]);

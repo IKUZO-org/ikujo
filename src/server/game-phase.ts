@@ -358,6 +358,6 @@ export async function markReady(
     });
     advanced = "ok" in r && r.advanced;
   }
-  if (!advanced) await broadcast(db, game.room_id, { type: "count", ready });
+  if (!advanced) await broadcast(db, game.room_id, { type: "count", gameId, phase, ready });
   return { ok: true, ready, total, serverNow };
 }

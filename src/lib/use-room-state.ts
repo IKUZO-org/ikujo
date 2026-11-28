@@ -3,7 +3,7 @@
 // 다시 읽는 때: 화면을 열 때, room:{roomId} 신호를 받을 때(count 는 빼고), 남은 시간이 0 이 될 때.
 // 0 이 되면 advance 를 부르고 다시 읽는다. 단계를 실제로 넘길지는 서버가 정한다.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { applyCount } from "@/lib/apply-count";
+import { applyCount, keepHeardCounts } from "@/lib/apply-count";
 import { runCoalesced, type CoalesceSlot } from "@/lib/coalesce";
 import { clockOffsetMs, remainingMs as calcRemaining } from "@/lib/room-clock";
 import { roomChannel, SIGNAL_EVENT, type RoomSignal } from "@/lib/realtime";
@@ -28,7 +28,10 @@ export function useRoomState(code: string) {
   const retry = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 읽는 중에 또 부르면 끝난 뒤 한 번만 더 읽는다 (#135). 읽기가 겹치지 않아 옛 응답이 새 응답을 덮지 않는다
+  // 이 읽기가 출발한 뒤 받은 count 신호. 응답이 그보다 옛 수면 내리지 않는다 (#135, keepHeardCounts)
+  const heard = useRef<Extract<RoomSignal, { type: "count" }>[]>([]);
   const load = useCallback(async () => {
+    heard.current = [];
     const r = await getRoomState({ code });
     if (!alive.current) return;
     if ("error" in r) return setError(r.error);
@@ -36,7 +39,7 @@ export function useRoomState(code: string) {
     setError(null);
     setOffsetMs(clockOffsetMs(r.serverNow, phoneNow));
     setNow(phoneNow);
-    setState(r.state);
+    setState(keepHeardCounts(r.state, heard.current));
     setVersion((v) => v + 1);
   }, [code]);
   const reading: CoalesceSlot = useRef({ inflight: null, dirty: false });
@@ -62,8 +65,10 @@ export function useRoomState(code: string) {
       .channel(roomChannel(roomId))
       .on("broadcast", { event: SIGNAL_EVENT }, ({ payload }) => {
         const signal = payload as RoomSignal;
-        if (signal?.type === "count") setState((s) => applyCount(s, signal));
-        else void reload();
+        if (signal?.type === "count") {
+          heard.current.push(signal);
+          setState((s) => applyCount(s, signal));
+        } else void reload();
       })
       .subscribe();
     return () => {
