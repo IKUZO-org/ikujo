@@ -171,12 +171,20 @@ export function Chip({ children }: { children: ReactNode }) {
  * 부르는 쪽의 relative 상자 위쪽 바깥에 겹쳐 뜬다 (아래 글과 버튼을 밀지 않게).
  * 언제 없앨지는 부르는 쪽이 정한다 (3초). 누르는 것을 막지 않는다
  */
-export function Toast({ children }: { children: ReactNode }) {
+export function Toast({
+  children,
+  side = "above",
+}: {
+  children: ReactNode;
+  /** 부르는 쪽 상자의 위(above) 또는 아래(below)에 겹쳐 뜬다. 대기실 방 코드 복사는 아래 (#145) */
+  side?: "above" | "below";
+}) {
+  const place = side === "above" ? "bottom-full mb-(--space-2)" : "top-full mt-(--space-2)";
   return (
     <div
       role="status"
       aria-live="polite"
-      className="screen-enter pointer-events-none absolute inset-x-0 bottom-full z-30 mb-(--space-2) flex justify-center"
+      className={`screen-enter pointer-events-none absolute inset-x-0 z-30 flex justify-center ${place}`}
     >
       <p className="rounded-(--radius-md) bg-(--color-surface) px-(--space-4) py-(--space-3) text-center text-(length:--text-md) font-bold text-(--color-text) shadow-(--shadow-overlay)">
         {children}

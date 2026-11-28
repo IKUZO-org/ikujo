@@ -5,11 +5,11 @@
 // 읽기와 room:{id} 신호 구독은 useRoomState 가 한다. 신호에는 비밀이 없다 (data §5)
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
-import { GameScreen } from "@/components/game";
+import { GameScreen, Toast } from "@/components/game";
 import { ErrorLine, Screen } from "@/components/Screen";
-import { copyText } from "@/lib/copy-text";
+import { copyText, systemShowsCopyNotice } from "@/lib/copy-text";
 import { playSound } from "@/lib/sound";
 import { useMine } from "@/lib/use-mine";
 import { useRoomSound } from "@/lib/use-room-sound";
@@ -30,6 +30,7 @@ import { Vote } from "./vote";
 const MIN_PLAYERS = 4;
 const MAX_PLAYERS = 6;
 const WHISPER_POLL_MS = 10_000;
+const COPY_TOAST_MS = 3000; // DESIGN.md §6 Toast "3초 뒤 사라짐"
 
 export function RoomView({ title }: { title: string }) {
   const { code } = useParams<{ code: string }>();
@@ -226,8 +227,23 @@ function Lobby({
   const count = state.players.length;
   const canStart = count >= MIN_PLAYERS; // AC-012
 
+  // 복사하면 토스트 "복사했어요" (#145). 안드로이드는 휴대폰이 직접 알림을 띄우므로 앱 토스트는 빼서 한 번만 보이게
+  const [toast, setToast] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    },
+    [],
+  );
+
   async function copy() {
-    setCopied(await copyText(state.code));
+    const ok = await copyText(state.code);
+    setCopied(ok);
+    if (!ok || systemShowsCopyNotice(navigator.userAgent)) return;
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(true);
+    toastTimer.current = setTimeout(() => setToast(false), COPY_TOAST_MS);
   }
 
   function start() {
@@ -272,22 +288,25 @@ function Lobby({
         </>
       }
     >
-      <button
-        type="button"
-        onClick={copy}
-        aria-label={`방 코드 ${state.code} 복사`}
-        className="flex min-h-11 flex-col items-center gap-(--space-1) rounded-(--radius-md) bg-(--color-surface) py-(--space-4)"
-      >
-        <span className="text-(length:--text-sm) text-(--color-text-muted)">방 코드</span>
-        <span className="text-(length:--text-xl) tracking-[0.3em]">{state.code}</span>
-        <span aria-live="polite" className="text-(length:--text-sm) text-(--color-text-muted)">
-          {copied === null
-            ? "눌러서 복사"
-            : copied
-              ? "복사했어요"
-              : "복사하지 못했어요. 코드를 직접 알려 주세요"}
-        </span>
-      </button>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={`방 코드 ${state.code} 복사`}
+          className="flex min-h-11 w-full flex-col items-center gap-(--space-1) rounded-(--radius-md) bg-(--color-surface) py-(--space-4)"
+        >
+          <span className="text-(length:--text-sm) text-(--color-text-muted)">방 코드</span>
+          <span className="text-(length:--text-xl) tracking-[0.3em]">{state.code}</span>
+          <span aria-live="polite" className="text-(length:--text-sm) text-(--color-text-muted)">
+            {copied === null
+              ? "눌러서 복사"
+              : copied
+                ? "복사했어요"
+                : "복사하지 못했어요. 코드를 직접 알려 주세요"}
+          </span>
+        </button>
+        {toast && <Toast side="below">복사했어요</Toast>}
+      </div>
 
       <h2 className="text-(length:--text-lg)">
         참가자 {count}/{MAX_PLAYERS}
