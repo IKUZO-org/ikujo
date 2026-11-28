@@ -22,7 +22,10 @@
 - 액션 뒤 다시 읽기 합류: 화면이 액션을 시작한 시각(`since`)을 `reload(since)` 로 넘긴다. 서버 액션은 하나씩 처리되므로 액션 뒤에 출발한 읽기는 이미 결과를 본다: 그 읽기에 합류만 한다. 액션 전에 출발한 읽기면 끝난 뒤 한 번 더 읽는다. 신호, 화면 열기, 타이머 0 은 그대로 끝난 뒤 한 번 더
   - 화면 호출부: opening, character-card, round, vote, ghost(속삭임, 출몰), reveal, room-view Lobby 시작. 액션 앞에 `const since = performance.now()` 한 줄, `reload(since)`, prop 타입
 - `useMine`: 방 상태 객체 대신 `useRoomState` 의 `version`(다시 읽어 받을 때만 늘어남)에 맞춰 다시 읽는다. count 신호로 수만 바뀔 때는 다시 읽지 않는다. 새 단서(단계 신호), 유령 여부, 내 속삭임/출몰 뒤(액션 뒤 다시 읽기)는 그대로 다시 읽고, 받은 속삭임은 주기 읽기로 받는다
-- 테스트: `tests/coalesce.test.ts`(합치기, 합류), `tests/db/phase.test.ts`(마지막 사람 count 생략, 못 넘기면 count 보냄), `tests/db/vote.test.ts`(마지막 표로 넘어가면 count 생략)
+- `src/lib/apply-count.ts`: count 신호는 지금 값보다 클 때만 반영한다 (거의 동시에 누르면 4 → 3 처럼 거꾸로 올 수 있음). 다시 읽기로 받은 값은 그대로 덮어쓴다
+- count 신호에 gameId, phase 를 싣고 (`markReady`, `castVote`, `RoomSignal`), `applyCount` 는 다른 판/단계 신호를 버린다
+- 다시 읽기 응답이 출발 뒤 받은 count 보다 옛 수면 내리지 않는다 (`keepHeardCounts`, 같은 판/단계만)
+- 테스트: `tests/apply-count.test.ts`(큰 값만 반영, 다른 판/단계 무시, 읽는 사이 받은 수 지키기), `tests/coalesce.test.ts`(합치기, 합류), `tests/db/phase.test.ts`(마지막 사람 count 생략, 못 넘기면 count 보냄), `tests/db/vote.test.ts`(마지막 표로 넘어가면 count 생략)
 
 ## 프롬프트 요약
 1. QA 3번(시작 뒤 시작까지 시간, PC와 폰 어긋남)과 5번(오프닝 끝 "다음" 뒤 표시가 늦음)을 코드로 확인
@@ -36,6 +39,8 @@
 9. 로컬 창 4개로 요청 횟수 확인
 10. 액션 뒤 reload 합류, useMine 다시 읽기 줄이기
 11. develop(#137) 합치기, reveal.tsx 충돌 해결
+12. count 신호 역순 도착 막기 (#139 리뷰에서 나옴)
+13. count 신호에 판/단계 싣기, 다시 읽기 응답과 겹칠 때 count 지키기 (ponytail 리뷰)
 
 ## 사용한 skill
 - worklog: 이 기록
@@ -47,12 +52,11 @@
 ## 확인
 - `npm run typecheck` → 통과
 - `npm run lint` → 통과
-- `npm test` → 157 통과 (develop 합친 뒤)
+- `npm test` → 160 통과
 - `npm run test:db` → 51 통과 (한 번은 vote.test.ts D-022 1개 실패, develop 에서도 같은 실패. 다시 돌리니 통과)
 - 로컬 창 4개 요청 횟수 (액션 뒤 합류 뒤 다시 잼) → 기준 4개 모두 통과: 방장 시작 뒤 getRoomState 1번, 중간 사람이 누를 때 다른 창 0번, 마지막 뒤 다른 창 1번, 누른 사람 ready 뒤 1번. getMine 은 count 신호마다 부르지 않음
 
 ## 남은 일
-- count 신호에는 단계가 없어, 늦게 온 앞 단계 count 가 다음 단계의 n/N 을 잠깐 바꿀 수 있다 (다음 읽기에서 바로잡힘)
 - 머지 뒤 프로덕션에서 다시 재기
 - vote.test.ts D-022 가 가끔 실패함 (develop 에서도)
 - 투표에서 못 넘긴 경우 count 를 보내는 테스트는 넣지 않음: 마지막 표는 판정으로 늘 넘어가고, 못 넘기는 경우는 동시 호출(stale)뿐이라 순서가 정해지지 않음
@@ -63,12 +67,12 @@
 | 항목 | 값 |
 | --- | --- |
 | 비용 | 모름 (비용 기록 없음) (세션 1개) |
-| 토큰 | 입력 156 · 출력 40.6k · 캐시 쓰기 109.6k · 캐시 읽기 10.3M |
-| 메시지 | 72 (메인 72, 서브에이전트 0) |
-| 모델 | claude-opus-5-5 72 |
-| 사용률 | 5시간 12% → 1% · 주간 17% → 18% |
-| 많이 쓴 도구 | Bash 67, Skill 1 |
+| 토큰 | 입력 182 · 출력 48.4k · 캐시 쓰기 124.5k · 캐시 읽기 12.2M |
+| 메시지 | 82 (메인 82, 서브에이전트 0) |
+| 모델 | claude-opus-5-5 82 |
+| 사용률 | 5시간 12% → 3% · 주간 17% → 18% |
+| 많이 쓴 도구 | Bash 76, Skill 1 |
 | skill | worklog 1 |
 | 에이전트 | 없음 |
 
-<!-- usage {"branch":"uyeon0/fix-135-ready-latency","issue":135,"sessions":1,"messages":72,"first":"2026-11-28","last":"2026-11-28","tokens":{"input":156,"output":40608,"cacheWrite":109567,"cacheRead":10257923},"costUSD":null,"where":{"main":{"messages":72,"output":40608},"subagent":{"messages":0,"output":0}},"models":{"claude-opus-5-5":{"messages":72,"output":40608}},"tools":{"Bash":67,"Skill":1},"skills":{"worklog":1},"agents":{},"rate":{"five_hour":{"from":12,"to":1},"seven_day":{"from":17,"to":18}}} -->
+<!-- usage {"branch":"uyeon0/fix-135-ready-latency","issue":135,"sessions":1,"messages":82,"first":"2026-11-28","last":"2026-11-28","tokens":{"input":182,"output":48423,"cacheWrite":124455,"cacheRead":12198098},"costUSD":null,"where":{"main":{"messages":82,"output":48423},"subagent":{"messages":0,"output":0}},"models":{"claude-opus-5-5":{"messages":82,"output":48423}},"tools":{"Bash":76,"Skill":1},"skills":{"worklog":1},"agents":{},"rate":{"five_hour":{"from":12,"to":3},"seven_day":{"from":17,"to":18}}} -->
