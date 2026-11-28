@@ -10,14 +10,14 @@ export function PhaseBar({
   title,
   phase,
   remainingMs,
-  ready = false,
+  talking = false,
   dead = false,
 }: {
   title: string;
   phase: string | null;
   remainingMs: number | null;
-  /** 이 단계에서 내가 준비 완료를 눌렀는지. 라운드 문구가 "토론 중"으로 바뀐다 (QA #136) */
-  ready?: boolean;
+  /** 모두 준비 완료를 누르고 토스트가 사라졌는지. 라운드 문구가 "토론 중"으로 바뀐다 (#138) */
+  talking?: boolean;
   /** r2 부터 희생자 폰(유령 모드). 라운드 문구가 "사망" (QA #136) */
   dead?: boolean;
 }) {
@@ -31,7 +31,7 @@ export function PhaseBar({
           </span>
         </span>
         <h1 className="text-center text-(length:--text-md) font-bold">
-          {phaseLabel(phase, { ready, dead })}
+          {phaseLabel(phase, { talking, dead })}
         </h1>
         <span className="flex justify-end">
           <Timer ms={remainingMs} label="남은 시간" />

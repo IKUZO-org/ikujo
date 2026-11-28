@@ -14,6 +14,7 @@ import { playSound } from "@/lib/sound";
 import { useMine } from "@/lib/use-mine";
 import { useRoomSound } from "@/lib/use-room-sound";
 import { useRoomState } from "@/lib/use-room-state";
+import { useTalk } from "@/lib/use-talk";
 import { leaveRoom } from "@/server/actions/leave-room";
 import { startGame } from "@/server/actions/start-game";
 import type { RoomState } from "@/server/rooms/core";
@@ -50,6 +51,11 @@ export function RoomView({ title }: { title: string }) {
   // r2 이후 덮는 화면(속보, 녹화 끊김, 출몰). 라운드 단계에서만 그린다
   const ghostCover = useGhostCover(game, isGhost, !!state?.me.isHost);
 
+  // 라운드에서 모두 준비하면 토스트 뒤 다 같이 "토론 중" (#138). 희생자 폰은 "사망" 그대로, 토스트도 없음
+  const roundKey = game?.round && !isGhost ? `${game.id}:${game.phase}` : null;
+  const allReady = !!game && game.ready.total > 0 && game.ready.count >= game.ready.total;
+  const talk = useTalk(roundKey, allReady);
+
   if (loadError) {
     // 방장이 해설에서 홈으로(endRoom)를 누르면 방이 닫혀 다시 읽기가 "없는 방"이 된다.
     // 오류 때도 state 는 마지막 것이 남아 있어서, 해설 중이었으면 끝 화면으로
@@ -76,7 +82,7 @@ export function RoomView({ title }: { title: string }) {
       title={title}
       phase={game?.phase ?? null}
       remainingMs={remainingMs}
-      ready={!!game?.ready.mine}
+      talking={talk.talking}
       dead={isGhost}
     />
   );
@@ -135,6 +141,8 @@ export function RoomView({ title }: { title: string }) {
               isHost={state.me.isHost}
               // 덮는 화면이 떠 있는 동안은 라운드 영상을 틀지 않는다. 닫으면 그때 튼다
               videoReady={ghostCover === null}
+              talking={talk.talking}
+              toast={talk.toast}
               top={top}
               reload={load}
             />
