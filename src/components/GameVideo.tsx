@@ -56,6 +56,8 @@ export function GameVideo({
   );
   // 소리를 켜고 틀려다 브라우저가 막으면 이번 재생은 음소거로 둔다
   const [blocked, setBlocked] = useState(false);
+  // 첫 장면을 그릴 수 있게 되었는지. 그 전에는 투명하게 둔다 (QA #136)
+  const [shown, setShown] = useState(false);
   const soundOn = useSyncExternalStore(onSettingsChange, soundSnapshot, serverSoundSnapshot);
   const wantSound = videoHasSound(id, { isHost, soundOn }) && !blocked;
 
@@ -140,11 +142,13 @@ export function GameVideo({
         preload="auto"
         disablePictureInPicture
         onLoadedMetadata={(e) => showLastFrame(e.currentTarget)}
+        // 첫 장면이 준비되면 살짝 나타난다: 글보다 늦게 툭 뜨지 않게 (QA #136)
+        onLoadedData={() => setShown(true)}
         // 재생 중일 때만 알린다. 마지막 장면으로 옮길 때 알리면 시각에 맞춘 소리(RV-02 등)가 또 난다
         onTimeUpdate={(e) => status === "playing" && time.current?.(e.currentTarget.currentTime)}
         onEnded={finish}
         onError={fail}
-        className="absolute inset-0 size-full bg-(--color-bg) object-contain"
+        className={`absolute inset-0 size-full bg-(--color-bg) object-contain transition-opacity duration-(--duration-base) motion-reduce:transition-none ${shown ? "opacity-100" : "opacity-0"}`}
       />
     </div>
   );

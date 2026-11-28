@@ -9,6 +9,7 @@ import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { GameScreen } from "@/components/game";
 import { ErrorLine, Screen } from "@/components/Screen";
+import { copyText } from "@/lib/copy-text";
 import { playSound } from "@/lib/sound";
 import { useMine } from "@/lib/use-mine";
 import { useRoomSound } from "@/lib/use-room-sound";
@@ -70,7 +71,15 @@ export function RoomView({ title }: { title: string }) {
   if (state.status === "lobby")
     return <Lobby state={state} onLeft={() => router.push("/")} reload={load} />;
 
-  const top = <PhaseBar title={title} phase={game?.phase ?? null} remainingMs={remainingMs} />;
+  const top = (
+    <PhaseBar
+      title={title}
+      phase={game?.phase ?? null}
+      remainingMs={remainingMs}
+      ready={!!game?.ready.mine}
+      dead={isGhost}
+    />
+  );
 
   // S-06 배정 중: 방은 시작했는데 판이 아직 없다 (AI 배정 중, FR-020)
   if (!game) return <Assigning top={top} />;
@@ -203,18 +212,14 @@ function Lobby({
   reload: () => Promise<void>;
 }) {
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  // null: 아직 안 누름, true: 복사함, false: 복사 못 함 (QA #136)
+  const [copied, setCopied] = useState<boolean | null>(null);
   const [pending, startTransition] = useTransition();
   const count = state.players.length;
   const canStart = count >= MIN_PLAYERS; // AC-012
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(state.code);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
+    setCopied(await copyText(state.code));
   }
 
   function start() {
@@ -267,7 +272,11 @@ function Lobby({
         <span className="text-(length:--text-sm) text-(--color-text-muted)">방 코드</span>
         <span className="text-(length:--text-xl) tracking-[0.3em]">{state.code}</span>
         <span aria-live="polite" className="text-(length:--text-sm) text-(--color-text-muted)">
-          {copied ? "복사했어요" : "눌러서 복사"}
+          {copied === null
+            ? "눌러서 복사"
+            : copied
+              ? "복사했어요"
+              : "복사하지 못했어요. 코드를 직접 알려 주세요"}
         </span>
       </button>
 

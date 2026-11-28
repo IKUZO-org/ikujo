@@ -4,28 +4,22 @@
 // 등장인물 보기 아이콘은 #73(설정) 범위 밖이라 두지 않았다
 import { Timer } from "@/components/game";
 import { SettingsButton } from "@/components/settings";
-
-// 문구는 spec 예시 "라운드 2 · 토론 중" 을 따르고, 나머지는 spec 화면 이름(S-07~S-12)
-export const PHASE_LABELS: Record<string, string> = {
-  intro: "오프닝",
-  secret: "인물 카드",
-  r1: "라운드 1 · 토론 중",
-  r2: "라운드 2 · 토론 중",
-  r3: "라운드 3 · 토론 중",
-  vote: "투표",
-  revote: "재투표",
-  reveal: "해설",
-  ended: "끝",
-};
+import { phaseLabel } from "@/lib/phase-label";
 
 export function PhaseBar({
   title,
   phase,
   remainingMs,
+  ready = false,
+  dead = false,
 }: {
   title: string;
   phase: string | null;
   remainingMs: number | null;
+  /** 이 단계에서 내가 준비 완료를 눌렀는지. 라운드 문구가 "토론 중"으로 바뀐다 (QA #136) */
+  ready?: boolean;
+  /** r2 부터 희생자 폰(유령 모드). 라운드 문구가 "사망" (QA #136) */
+  dead?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-10 shrink-0 bg-(--color-bg) pt-[env(safe-area-inset-top)] text-(--color-text)">
@@ -37,7 +31,7 @@ export function PhaseBar({
           </span>
         </span>
         <h1 className="text-center text-(length:--text-md) font-bold">
-          {phase ? (PHASE_LABELS[phase] ?? "") : ""}
+          {phaseLabel(phase, { ready, dead })}
         </h1>
         <span className="flex justify-end">
           <Timer ms={remainingMs} label="남은 시간" />

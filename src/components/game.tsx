@@ -28,7 +28,8 @@ export function GameScreen({
     <div className="relative flex min-h-dvh flex-col bg-(--color-bg) text-(--color-text)">
       {isPrivate && <PrivateBand />}
       {top}
-      <main className="flex flex-1 flex-col px-(--space-4)">
+      {/* 상단 바는 그대로 두고 본문과 버튼만 살짝 나타난다 (QA #136) */}
+      <main className="screen-enter flex flex-1 flex-col px-(--space-4)">
         <div
           aria-hidden={graphic ? undefined : true}
           className="flex min-h-24 flex-1 bg-(--color-bg)"
@@ -40,7 +41,7 @@ export function GameScreen({
         </div>
       </main>
       {bottom && (
-        <div className="sticky bottom-0 flex flex-col gap-(--space-2) bg-(--color-bg) px-(--space-4) pt-(--space-3) pb-[max(env(safe-area-inset-bottom),var(--space-4))]">
+        <div className="screen-enter sticky bottom-0 flex flex-col gap-(--space-2) bg-(--color-bg) px-(--space-4) pt-(--space-3) pb-[max(env(safe-area-inset-bottom),var(--space-4))]">
           {bottom}
         </div>
       )}
