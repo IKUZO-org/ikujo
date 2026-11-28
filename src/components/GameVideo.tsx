@@ -38,6 +38,8 @@ export function GameVideo({
   isHost = false,
   onEnded,
   onTime,
+  fit = "contain",
+  position,
 }: {
   id: VideoId;
   gameId: string;
@@ -47,6 +49,13 @@ export function GameVideo({
   onEnded?: (how: "ended" | "skipped") => void;
   /** 재생 중 시각(초)이 바뀔 때마다 (timeupdate). 영상 안 장면에 맞춰 소리를 낼 때 쓴다 */
   onTime?: (seconds: number) => void;
+  /**
+   * 그래픽 영역에 넣는 방식. 기본은 통째로 보이기(contain, ART.md §12, RULES.md §3, #106).
+   * 라운드 2, 3만 예외로 꽉 채우기(cover)를 넘긴다 (#143)
+   */
+  fit?: "contain" | "cover";
+  /** fit="cover" 일 때 영상의 어느 부분을 남길지 (CSS object-position). 주지 않으면 가운데 */
+  position?: string;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const key = playedKey(gameId, id);
@@ -148,7 +157,8 @@ export function GameVideo({
         onTimeUpdate={(e) => status === "playing" && time.current?.(e.currentTarget.currentTime)}
         onEnded={finish}
         onError={fail}
-        className={`absolute inset-0 size-full bg-(--color-bg) object-contain transition-opacity duration-(--duration-base) motion-reduce:transition-none ${shown ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 size-full bg-(--color-bg) ${fit === "cover" ? "object-cover" : "object-contain"} transition-opacity duration-(--duration-base) motion-reduce:transition-none ${shown ? "opacity-100" : "opacity-0"}`}
+        style={position ? { objectPosition: position } : undefined}
       />
     </div>
   );
