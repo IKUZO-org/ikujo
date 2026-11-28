@@ -33,6 +33,7 @@ export const ASSIGN_SYSTEM = [
   "범인(culprit)은 입력의 culpritCandidates 중 하나. 희생자(victim)는 범인이 아닌 핵심 인물(core).",
   "clues 는 r1, r2, r3 마다 { 인물 ID: [개인 단서 ID] }. 그 라운드의 개인(private) 단서만, 단서의 for 에 있는 인물에게만, 한 단서는 한 번만.",
   "레드 헤링(redHerring)은 이 판에 있는 인물을 가리키는 것만, 그 밖의 단서는 이번 범인을 가리키는 것만.",
+  "알리바이 증거(clears)는 그 인물이 이 판에 있고 범인이 아닐 때만 준다. 범인의 증거는 절대 주지 않는다.",
   '출력은 JSON 하나만: {"culprit":"","victim":"","seats":[{"playerSeat":1,"character":""}],"clues":{"r1":{},"r2":{},"r3":{}}}',
 ].join("\n");
 

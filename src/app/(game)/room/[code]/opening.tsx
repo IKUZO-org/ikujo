@@ -30,7 +30,7 @@ const BEATS: Beat[] = [
     title: "제작진 단톡방 · 21:30",
     body: (
       <>
-        <Chip>PD</Chip>
+        <Chip>강도윤 PD</Chip>
         <span className="block pt-(--space-2)">
           “내일 생방송에서 전부 말할 거야. 원본은 편집실에 있다.”
         </span>
@@ -42,8 +42,8 @@ const BEATS: Beat[] = [
     body: "10분 동안 불이 꺼졌어요. 하나뿐인 위성 전화도 먹통이에요.",
   },
   {
-    title: "22:12 PD 발견",
-    body: "비상 전원이 켜지고, 편집실에서 쓰러진 PD가 발견됐어요. 범인은 이 안에 있어요.",
+    title: "22:12 강도윤 PD 발견",
+    body: "비상 전원이 켜지고, 편집실에서 쓰러진 강도윤 PD가 발견됐어요. 범인은 이 안에 있어요.",
   },
 ];
 

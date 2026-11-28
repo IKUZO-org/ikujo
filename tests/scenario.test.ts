@@ -20,12 +20,15 @@ describe("scenarios/live-death.json", () => {
     expect(charactersFor(s, 6)).toHaveLength(6);
   });
 
-  it("OQ-013: 4명 판의 호감, 작가, 선수는 특징이 1명뿐이라 고를 수 없다", () => {
-    const four = checkScenario(liveDeath)
-      .unsupported.filter((u) => u.players === 4)
-      .map((u) => u.culprit)
-      .sort();
-    expect(four).toEqual(["athlete", "fav", "writer"]);
+  it("D-030: 특징 해당자를 늘려 4명 판에서도 모든 범인을 고를 수 있다 (OQ-013 닫음)", () => {
+    expect(checkScenario(liveDeath).unsupported).toEqual([]);
+  });
+
+  it("D-032 알리바이 퍼즐: 모든 인물에게 증거(clears)가 하나씩 있다", () => {
+    const s = scenarioSchema.parse(liveDeath);
+    for (const c of s.characters) {
+      expect(s.clues.filter((x) => x.clears?.includes(c.id))).toHaveLength(1);
+    }
   });
 
   it("6명 판은 모든 범인을 고를 수 있다 (BR-006)", () => {
@@ -73,6 +76,24 @@ describe("checkScenario 오류", () => {
     const s = clone();
     s.redHerrings = s.redHerrings.filter((r) => r.clue !== "c-r2-02");
     expect(checkScenario(s).errors).toContain("레드 헤링 해설 없음: c-r2-02");
+  });
+
+  it("D-032: 증거가 없는 인물, 증거를 본인이 받는 단서를 찾는다", () => {
+    const s = clone();
+    s.clues = s.clues.filter((c) => !c.clears?.includes("fav"));
+    const wrong = s.clues.find((c) => c.clears?.includes("villain"))!;
+    wrong.for = [...wrong.for!, "villain"];
+    const { errors } = checkScenario(s);
+    expect(errors).toContain("증거 없음: fav");
+    expect(errors.join()).toContain(`증거를 본인이 받음: ${wrong.id}`);
+  });
+
+  it("D-032: 증거(clears)는 개인 단서만", () => {
+    const s = clone();
+    const c = s.clues.find((x) => x.clears)!;
+    c.visibility = "public";
+    delete c.for;
+    expect(checkScenario(s).ok).toBe(false);
   });
 
   it("비밀이 없는 인물을 찾는다 (D-016)", () => {

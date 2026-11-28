@@ -65,10 +65,11 @@ describe("assignByRule: 인원별 100판 (AC-020-1~3)", () => {
       "22:00",
       "22:00~22:10",
       "22:12",
+      "22:30",
+      "R2",
     ]);
-    // OQ-013: 4명은 악역만, 5명은 호감과 악역만, 6명은 넷 다
-    const expected = { 4: ["villain"], 5: ["fav", "villain"], 6: CORE }[n]!;
-    expect([...culprits].sort()).toEqual([...expected].sort());
+    // D-030: 특징 해당자를 늘려 4~6명 모두 범인 넷 다 고를 수 있다
+    expect([...culprits].sort()).toEqual([...CORE].sort());
   });
 
   it("개인 단서: 범인을 가리키는 단서와 레드 헤링만, r2부터 희생자는 안 받음", () => {
@@ -79,12 +80,35 @@ describe("assignByRule: 인원별 100판 (AC-020-1~3)", () => {
           if (i >= 1) expect(ch).not.toBe(plan.victim);
           for (const id of ids) {
             const clue = scenario.clues.find((c) => c.id === id)!;
-            expect(clue.redHerring || clue.pointsTo?.includes(plan.culprit)).toBe(true);
+            expect(clue.redHerring || clue.pointsTo?.includes(plan.culprit) || !!clue.clears).toBe(
+              true,
+            );
           }
         }
       }
     }
   });
+
+  it.each([4, 5, 6])(
+    "D-032 알리바이 퍼즐 %i명: 범인이 아닌 사람의 증거만, 본인 말고 다른 사람에게",
+    (n) => {
+      for (let seed = 1; seed <= 100; seed++) {
+        const plan = goodPlan(n, seed);
+        const present = new Set(plan.seats.map((s) => s.character));
+        const given = new Map<string, string>();
+        for (const r of Object.values(plan.clues))
+          for (const [ch, ids] of Object.entries(r)) for (const id of ids) given.set(id, ch);
+        for (const clue of scenario.clues.filter((c) => c.clears)) {
+          const who = clue.clears![0];
+          if (who === plan.culprit || !present.has(who)) expect(given.has(clue.id)).toBe(false);
+          else {
+            expect(given.has(clue.id)).toBe(true);
+            expect(given.get(clue.id)).not.toBe(who);
+          }
+        }
+      }
+    },
+  );
 
   it("4명 판에는 빠진 인물(인플, 의료)을 가리키는 레드 헤링을 주지 않는다", () => {
     const plan = goodPlan(4, 3);
@@ -106,14 +130,11 @@ describe("validateAssignment: 잘못된 배정 거절 (AC-020-4)", () => {
     expect(errors).toContain("없는 단서: c-r9-99");
   });
 
-  it("BR-003: 범인은 핵심 인물, BR-006: 이 인원에서 못 고르는 범인", () => {
+  it("BR-003: 범인은 핵심 인물", () => {
     expect(
       validateAssignment(scenario, players, { ...goodPlan(5), culprit: "influencer" }).join(),
     ).toContain("범인:");
-    // 5명 판의 선수는 특징 해당 1명 (OQ-013)
-    expect(
-      validateAssignment(scenario, players, { ...goodPlan(5), culprit: "athlete" }).join(),
-    ).toContain("범인: athlete");
+    // BR-006(이 인원에서 못 고르는 범인)은 D-030 으로 4명 모두 가능해져 위 "4명 모두 범인 가능" 테스트가 맡는다
   });
 
   it("BR-004: 희생자가 범인이거나 추가 인물이면 거절", () => {
@@ -146,6 +167,13 @@ describe("validateAssignment: 잘못된 배정 거절 (AC-020-4)", () => {
     expect(
       bad({ r1: { fav: ["c-r1-04"], villain: ["c-r1-04"] }, r2: {}, r3: {} }).join(),
     ).toContain("두 번");
+    // D-032: 범인의 증거(clears)를 주면 범인이 아닌 게 된다
+    const culpritClear = scenario.clues.find((c) => c.clears?.includes(base.culprit))!;
+    const to = culpritClear.for!.find((ch) => ch !== base.victim)!;
+    const key = (["r1", "r2", "r3"] as const)[culpritClear.round - 1];
+    expect(bad({ r1: {}, r2: {}, r3: {}, [key]: { [to]: [culpritClear.id] } }).join()).toContain(
+      "이번 판과 맞지 않음",
+    );
   });
 
   it("형식이 틀리면 거절", () => {

@@ -1,121 +1,208 @@
 {
   "id": "live-death",
   "title": "생방송 중 사망",
-  "version": 1,
+  "version": 2,
   "timeline": [
     {
       "at": "21:30",
-      "text": "PD가 제작진 단톡방에 \"내일 생방송에서 전부 말할 거야. 원본은 편집실에 있다.\""
+      "text": "강도윤 PD가 제작진 단톡방에 \"내일 생방송에서 전부 말할 거야. 원본은 편집실에 있다.\""
     },
-    { "at": "21:50", "text": "누군가 발전기실 차단기를 내린다" },
-    { "at": "22:00", "text": "섬 전체 정전 (10분)" },
+    {
+      "at": "21:50",
+      "text": "누군가 발전기실 차단기를 내린다"
+    },
+    {
+      "at": "22:00",
+      "text": "섬 전체 정전 (10분)"
+    },
     {
       "at": "22:00~22:10",
-      "text": "범인이 편집실에서 PD를 결승 트로피로 내리치고 원본 하드디스크를 가져간다"
+      "text": "범인이 편집실에서 PD를 결승 트로피로 내리치고 원본 하드디스크를 가져간다. 나오다 복도에서 누군가와 스친다"
     },
-    { "at": "22:12", "text": "비상 전원, 쓰러진 PD 발견" }
+    {
+      "at": "22:12",
+      "text": "비상 전원, 쓰러진 PD 발견"
+    },
+    {
+      "at": "22:30",
+      "text": "범인이 의료 가방에서 수면제를 훔쳐 복도에서 스친 사람의 컵에 탄다"
+    },
+    {
+      "at": "R2",
+      "text": "그 사람이 거실에서 쓰러져 의식을 잃는다"
+    }
   ],
   "characters": [
     {
       "id": "fav",
       "core": true,
-      "name": "국민 호감 1위",
-      "intro": "착한 이미지로 인기 1위",
+      "name": "출연자 · 유치원 교사 윤하늘",
+      "intro": "시청자 투표 1위. 늘 웃고 남을 챙겨 '국민 호감'으로 불린다",
       "order": 1
     },
     {
       "id": "villain",
       "core": true,
-      "name": "악역 담당",
-      "intro": "방송에서 욕먹는 캐릭터",
+      "name": "출연자 · 헬스 트레이너 차민혁",
+      "intro": "별명 '독설 트레이너'. 매회 싸움을 걸어 가장 욕을 많이 먹는다",
       "order": 2
     },
     {
       "id": "athlete",
       "core": true,
-      "name": "전직 운동선수",
-      "intro": "상금이 꼭 필요한 사람",
+      "name": "출연자 · 전직 유도 국가대표 김태오",
+      "intro": "은퇴 뒤 처음 나온 방송. 상금이 꼭 필요하다고 말한다",
       "order": 3
     },
     {
       "id": "writer",
       "core": true,
-      "name": "막내 작가",
-      "intro": "제작진이지만 섬에 남은 사람",
+      "name": "막내 작가 이소라",
+      "intro": "제작진 중 유일하게 섬에 남았다",
       "order": 4
     },
     {
       "id": "influencer",
       "core": false,
       "minPlayers": 5,
-      "name": "인플루언서",
-      "intro": "팔로워 300만, 방송보다 SNS",
+      "name": "출연자 · 뷰티 인플루언서 제나",
+      "intro": "팔로워 300만. 방송보다 자기 SNS에 더 열심이다",
       "order": 5
     },
     {
       "id": "medic",
       "core": false,
       "minPlayers": 6,
-      "name": "의료 담당",
-      "intro": "출연자 건강 체크 스태프",
+      "name": "의료진 · 응급의학과 의사 박정우",
+      "intro": "촬영 내내 섬에 머무는 의사",
       "order": 6
     }
   ],
   "secrets": [
-    { "id": "s-fav-1", "character": "fav", "text": "제작진에게 미리 미션 내용을 받았다" },
-    { "id": "s-villain-1", "character": "villain", "text": "악역은 PD가 시킨 대본이었다" },
-    { "id": "s-athlete-1", "character": "athlete", "text": "큰 빚이 있고 사채업자에게 쫓긴다" },
-    { "id": "s-writer-1", "character": "writer", "text": "원본 영상 백업을 몰래 갖고 있다" },
-    { "id": "s-influencer-1", "character": "influencer", "text": "섬에서 몰래 라이브를 켰었다" },
-    { "id": "s-medic-1", "character": "medic", "text": "탈락자 \"사고\" 기록을 고쳤다" }
+    {
+      "id": "s-fav-1",
+      "character": "fav",
+      "text": "제작진에게 미리 미션 내용을 받았다"
+    },
+    {
+      "id": "s-villain-1",
+      "character": "villain",
+      "text": "방송 속 독설은 강도윤 PD가 시킨 대본이었다"
+    },
+    {
+      "id": "s-athlete-1",
+      "character": "athlete",
+      "text": "큰 빚이 있고 사채업자에게 쫓긴다"
+    },
+    {
+      "id": "s-writer-1",
+      "character": "writer",
+      "text": "원본 영상 백업을 몰래 갖고 있다"
+    },
+    {
+      "id": "s-influencer-1",
+      "character": "influencer",
+      "text": "섬에서 몰래 라이브를 켰었다"
+    },
+    {
+      "id": "s-medic-1",
+      "character": "medic",
+      "text": "3주 차 탈락자의 \"사고\" 진단 기록을 고쳤다"
+    }
   ],
   "alibis": [
-    { "id": "a-fav-1", "character": "fav", "text": "TODO(시나리오 담당)" },
-    { "id": "a-villain-1", "character": "villain", "text": "TODO(시나리오 담당)" },
-    { "id": "a-athlete-1", "character": "athlete", "text": "TODO(시나리오 담당)" },
-    { "id": "a-writer-1", "character": "writer", "text": "TODO(시나리오 담당)" },
-    { "id": "a-influencer-1", "character": "influencer", "text": "TODO(시나리오 담당)" },
-    { "id": "a-medic-1", "character": "medic", "text": "TODO(시나리오 담당)" }
+    {
+      "id": "a-fav-1",
+      "character": "fav",
+      "text": "정전 때 출연자 숙소 내 방에 누워 있었다"
+    },
+    {
+      "id": "a-villain-1",
+      "character": "villain",
+      "text": "22:05까지 PD와 무전으로 대본 얘기를 했다"
+    },
+    {
+      "id": "a-athlete-1",
+      "character": "athlete",
+      "text": "밖에서 통화했다"
+    },
+    {
+      "id": "a-writer-1",
+      "character": "writer",
+      "text": "작가 숙소에서 자막 작업을 했다"
+    },
+    {
+      "id": "a-influencer-1",
+      "character": "influencer",
+      "text": "출연자 숙소 2층 내 방에서 자고 있었다"
+    },
+    {
+      "id": "a-medic-1",
+      "character": "medic",
+      "text": "의무실에서 약품을 정리했다"
+    }
   ],
   "traits": [
-    { "id": "t-citrus", "text": "시트러스 향수 냄새", "characters": ["fav", "influencer"] },
+    {
+      "id": "t-citrus",
+      "text": "시트러스 향수 냄새",
+      "characters": ["fav", "writer", "influencer"]
+    },
     {
       "id": "t-black-cap",
       "text": "검은 볼캡 실루엣",
       "characters": ["villain", "athlete", "medic"]
     },
-    { "id": "t-limp", "text": "오른쪽 다리를 살짝 저는 걸음", "characters": ["athlete", "medic"] },
-    { "id": "t-radio", "text": "무전기 지직거리는 소리", "characters": ["writer", "medic"] }
+    {
+      "id": "t-limp",
+      "text": "오른쪽 다리를 살짝 저는 걸음",
+      "characters": ["athlete", "villain", "medic"]
+    },
+    {
+      "id": "t-radio",
+      "text": "무전기 지직거리는 소리",
+      "characters": ["writer", "villain", "medic"]
+    }
   ],
   "culprits": [
     {
       "character": "fav",
-      "motive": "미션 유출이 드러나면 이미지와 광고 계약 끝",
-      "mistake": "\"정전 때 누워 있었다\"는데 폰 충전 기록이 21:48에 끊김",
+      "motive": "미션을 미리 받은 게 폭로되면 이미지와 광고 계약이 끝난다",
+      "mistake": "\"정전 때 방에 누워 있었다\"는데 폰 충전 기록이 21:48에 끊겼다",
       "trait": "t-citrus"
     },
     {
       "character": "villain",
-      "motive": "\"사고를 유발한 악역\"이 될까 두려움",
-      "mistake": "현장 사진 공개 전에 \"트로피로 그랬다며?\"",
+      "motive": "3주 차 사고를 도발한 사람으로 찍힐까 두렵다",
+      "mistake": "현장 사진이 돌기 전에 \"트로피로 맞았다며?\"라고 했다",
       "trait": "t-black-cap"
     },
     {
       "character": "athlete",
-      "motive": "상금 없으면 빚을 못 갚음, 폭로되면 결승 취소",
-      "mistake": "무릎 보호대 찍찍이 조각이 편집실 문틈에. \"오늘 보호대 안 찼다\"",
+      "motive": "상금이 없으면 빚을 못 갚는다. 폭로되면 결승이 취소된다",
+      "mistake": "무릎 보호대 찍찍이 조각이 편집실 문틈에 있었다. \"오늘은 보호대 안 찼다\"고 했다",
       "trait": "t-limp"
     },
     {
       "character": "writer",
-      "motive": "원본을 PD보다 먼저 언론에 팔려 함",
-      "mistake": "파일명 \"EP3_RAW_cliff\"를 정확히 앎, 편집실 안 갔다고 함",
+      "motive": "원본을 PD보다 먼저 언론에 팔려 했다",
+      "mistake": "파일명 \"EP3_RAW_cliff\"를 정확히 알면서 편집실에 안 갔다고 했다",
       "trait": "t-radio"
     }
   ],
   "clues": [
-    { "id": "c-r1-01", "round": 1, "visibility": "public", "text": "TODO(시나리오 담당)" },
-    { "id": "c-r1-02", "round": 1, "visibility": "public", "text": "TODO(시나리오 담당)" },
+    {
+      "id": "c-r1-01",
+      "round": 1,
+      "visibility": "public",
+      "text": "22:12 비상등이 켜지고 5분 안에 모두 거실에 모였다. 정전 10분 동안 어디 있었는지 서로 확인해 준 사람은 없다"
+    },
+    {
+      "id": "c-r1-02",
+      "round": 1,
+      "visibility": "public",
+      "text": "어제 미션 영상: 차민혁이 바위에서 미끄러져 오른쪽 발목을 접질린다. 오늘도 붕대를 감고 있다"
+    },
     {
       "id": "c-r1-03",
       "round": 1,
@@ -123,7 +210,7 @@
       "for": ["villain", "athlete", "writer", "influencer", "medic"],
       "pointsTo": ["fav"],
       "redHerring": false,
-      "text": "폰 충전 기록이 21:48에 끊김"
+      "text": "윤하늘 폰 충전 기록이 21:48에 끊겼다"
     },
     {
       "id": "c-r1-04",
@@ -132,7 +219,7 @@
       "for": ["fav", "villain", "writer", "influencer", "medic"],
       "pointsTo": ["athlete"],
       "redHerring": true,
-      "text": "선수 가방 속 피 묻은 수건"
+      "text": "김태오 가방 속 피 묻은 수건"
     },
     {
       "id": "c-r1-05",
@@ -141,7 +228,7 @@
       "for": ["fav", "villain", "athlete", "writer", "medic"],
       "pointsTo": ["influencer"],
       "redHerring": true,
-      "text": "발전기실 근처 진흙 발자국"
+      "text": "발전기실 근처 진흙 발자국. 작은 운동화 크기다"
     },
     {
       "id": "c-r1-06",
@@ -150,7 +237,7 @@
       "for": ["fav", "villain", "athlete", "influencer", "medic"],
       "pointsTo": ["writer"],
       "redHerring": true,
-      "text": "작가 숙소의 빈 하드디스크 케이스"
+      "text": "이소라 숙소의 빈 하드디스크 케이스"
     },
     {
       "id": "c-r1-07",
@@ -159,7 +246,7 @@
       "for": ["fav", "villain", "athlete", "writer", "influencer"],
       "pointsTo": ["medic"],
       "redHerring": true,
-      "text": "의료 가방 수면제 한 통이 빔"
+      "text": "박정우 의료 가방의 수면제 한 통이 비어 있다"
     },
     {
       "id": "c-r1-08",
@@ -168,7 +255,7 @@
       "for": ["fav", "athlete", "writer", "influencer", "medic"],
       "pointsTo": ["villain"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "차민혁은 22:05까지 PD와 무전으로 대본 얘기를 했다고 한다. 그런데 PD의 무전기는 21:40부터 편집실 충전대에 꺼진 채 꽂혀 있었다"
     },
     {
       "id": "c-r1-09",
@@ -177,7 +264,7 @@
       "for": ["fav", "villain", "writer", "influencer", "medic"],
       "pointsTo": ["athlete"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "김태오는 밖에서 통화했다고 한다. 정전되면 섬의 와이파이 통화도 끊기고, 그 시간 김태오 폰에는 발신 기록이 없다"
     },
     {
       "id": "c-r1-10",
@@ -186,13 +273,43 @@
       "for": ["fav", "villain", "athlete", "influencer", "medic"],
       "pointsTo": ["writer"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "이소라는 숙소에서 자막 작업을 했다고 한다. 노트북의 마지막 저장은 21:45이고, 정전 때 배터리는 가득 차 있었다"
+    },
+    {
+      "id": "c-r1-11",
+      "round": 1,
+      "visibility": "private",
+      "for": ["villain", "athlete", "writer", "influencer", "medic"],
+      "clears": ["fav"],
+      "text": "윤하늘 폰 사진첩: 22:04, 어두운 작가 숙소 안에서 플래시로 찍힌 셀카. 뒤에 이소라의 노트북이 보인다"
+    },
+    {
+      "id": "c-r1-12",
+      "round": 1,
+      "visibility": "private",
+      "for": ["fav", "villain", "writer", "influencer", "medic"],
+      "clears": ["athlete"],
+      "text": "선착장 비상 위성 단말 기록: 22:03~22:08 외부 번호와 통화. 로그인 이름 김태오. 선착장은 편집실에서 걸어서 5분이다"
+    },
+    {
+      "id": "c-r1-13",
+      "round": 1,
+      "visibility": "private",
+      "for": ["fav", "villain", "athlete", "writer", "medic"],
+      "clears": ["influencer"],
+      "text": "제나의 몰래 라이브 저장본 22:01~22:07: 발전기실 옆 덤불, 어둠 속에서 \"와이파이 왜 안 잡혀\" 하는 속삭임"
     },
     {
       "id": "c-r2-01",
       "round": 2,
       "visibility": "public",
-      "text": "PD가 제작진 단톡방에 \"내일 생방송에서 전부 말할 거야. 원본은 편집실에 있다.\""
+      "text": "강도윤 PD가 제작진 단톡방에 \"내일 생방송에서 전부 말할 거야. 원본은 편집실에 있다.\""
+    },
+    {
+      "id": "c-r2-07",
+      "round": 2,
+      "visibility": "public",
+      "text": "쓰러진 사람의 컵 바닥에 하얀 가루가 남아 있다. 의료 가방의 수면제와 같은 모양이다"
     },
     {
       "id": "c-r2-02",
@@ -201,7 +318,7 @@
       "for": ["fav", "athlete", "writer", "influencer", "medic"],
       "pointsTo": ["villain"],
       "redHerring": true,
-      "text": "PD 폰 최근 통화에 악역 3회"
+      "text": "PD 폰 최근 통화에 차민혁이 3번"
     },
     {
       "id": "c-r2-03",
@@ -210,7 +327,7 @@
       "for": ["fav", "villain", "writer", "influencer", "medic"],
       "pointsTo": ["athlete"],
       "redHerring": false,
-      "text": "무릎 보호대 찍찍이 조각이 편집실 문틈에"
+      "text": "무릎 보호대 찍찍이 조각이 편집실 문틈에 끼어 있다"
     },
     {
       "id": "c-r2-04",
@@ -219,7 +336,7 @@
       "for": ["villain", "athlete", "writer", "influencer", "medic"],
       "pointsTo": ["fav"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "PD 손에 하늘색 머리끈이 쥐어져 있다. 윤하늘이 방송 내내 하던 것과 같다"
     },
     {
       "id": "c-r2-05",
@@ -228,7 +345,7 @@
       "for": ["fav", "athlete", "writer", "influencer", "medic"],
       "pointsTo": ["villain"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "현장 사진이 돌기 전, 차민혁이 \"트로피로 맞았다며?\"라고 했다. 흉기가 트로피라는 건 발견한 사람 말고는 몰랐다"
     },
     {
       "id": "c-r2-06",
@@ -237,7 +354,31 @@
       "for": ["fav", "villain", "athlete", "influencer", "medic"],
       "pointsTo": ["writer"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "이소라가 \"그 EP3_RAW_cliff 파일이요\"라고 했다. 편집실 모니터에서만 보이는 파일 이름이다. 이소라는 오늘 편집실에 안 갔다고 했다"
+    },
+    {
+      "id": "c-r2-08",
+      "round": 2,
+      "visibility": "private",
+      "for": ["fav", "athlete", "writer", "influencer", "medic"],
+      "clears": ["villain"],
+      "text": "PD 숙소 현관 도어캠(배터리) 기록: 22:02~22:09 차민혁이 문 앞을 서성인다. 노크는 하지 않는다"
+    },
+    {
+      "id": "c-r2-09",
+      "round": 2,
+      "visibility": "private",
+      "for": ["fav", "villain", "athlete", "influencer", "medic"],
+      "clears": ["writer"],
+      "text": "이소라 노트북 얼굴 인식 잠금 기록: 22:06 화면 앞 얼굴은 이소라. 작업 파일은 열리지 않았다"
+    },
+    {
+      "id": "c-r2-10",
+      "round": 2,
+      "visibility": "private",
+      "for": ["fav", "villain", "athlete", "writer", "influencer"],
+      "clears": ["medic"],
+      "text": "의무실 약품 냉장고(배터리 백업) 문 열림 기록: 22:02, 22:07. 카드 태그 박정우"
     },
     {
       "id": "c-r3-01",
@@ -245,7 +386,7 @@
       "visibility": "public",
       "pointsTo": ["fav"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "원본 · 3주 차 미션 전날 밤 23:40. 이소라가 윤하늘에게 접힌 종이를 건넨다. \"내일 절벽 미션, 로프 순서야.\""
     },
     {
       "id": "c-r3-02",
@@ -253,7 +394,7 @@
       "visibility": "public",
       "pointsTo": ["villain"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "원본 · 사고 1분 전. 화면 밖에서 PD 목소리가 들린다. \"민혁아, 더 세게 긁어.\" 차민혁이 고개를 끄덕이고 서진에게 다가간다"
     },
     {
       "id": "c-r3-03",
@@ -261,7 +402,7 @@
       "visibility": "public",
       "pointsTo": ["athlete"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "원본 · 사고 10분 전. 김태오가 로프 점검표에 사인한다. 해진 로프를 한 번 만져 보고 그냥 넘긴다"
     },
     {
       "id": "c-r3-04",
@@ -269,65 +410,99 @@
       "visibility": "public",
       "pointsTo": ["writer"],
       "redHerring": false,
-      "text": "TODO(시나리오 담당)"
+      "text": "원본 · 사고 직후. 편집본에는 없는 장면이다. 카메라 옆에서 누군가 USB에 파일을 옮기는 손이 보인다. 손목에 이소라의 팔찌가 있다"
     }
   ],
   "redHerrings": [
-    { "clue": "c-r1-04", "suspect": "athlete", "truth": "사채업자에게 맞은 상처를 숨김" },
+    {
+      "clue": "c-r1-04",
+      "suspect": "athlete",
+      "truth": "사채업자에게 맞은 상처를 숨겼다"
+    },
     {
       "clue": "c-r1-05",
       "suspect": "influencer",
-      "truth": "몰래 라이브하려고 와이파이를 찾아다님"
+      "truth": "제나가 몰래 라이브를 하려고 와이파이를 찾아다녔다"
     },
-    { "clue": "c-r2-02", "suspect": "villain", "truth": "생방송 대본 수정 통화" },
-    { "clue": "c-r1-06", "suspect": "writer", "truth": "원본 백업용 개인 하드디스크" },
-    { "clue": "c-r1-07", "suspect": "medic", "truth": "선수에게 진통제와 함께 넘김" }
+    {
+      "clue": "c-r2-02",
+      "suspect": "villain",
+      "truth": "낮에 생방송 대본을 고치느라 통화했다"
+    },
+    {
+      "clue": "c-r1-06",
+      "suspect": "writer",
+      "truth": "원본 백업용 개인 하드디스크 케이스다"
+    },
+    {
+      "clue": "c-r1-07",
+      "suspect": "medic",
+      "truth": "박정우가 김태오에게 진통제와 함께 수면제 한 통을 넘겼다. 남은 통에서 몇 알이 더 빈 건 박정우도 모른다. 범인이 훔쳐 두 번째 희생에 썼다"
+    }
   ],
   "pairs": [
     {
       "a": "fav",
       "b": "writer",
-      "secret": "작가가 미션 내용을 흘렸다",
+      "secret": "이소라가 미션 내용을 흘렸고, 윤하늘은 고마움의 표시로 같은 향수를 선물했다",
       "tension": "들키면 둘 다 끝"
     },
     {
       "a": "villain",
       "b": "writer",
-      "secret": "악역 대본을 작가가 썼다",
-      "tension": "악역은 \"나도 피해자\"라고 말하고 싶다"
+      "secret": "차민혁의 독설 대본을 이소라가 썼다",
+      "tension": "차민혁은 \"나도 피해자\"라고 말하고 싶다"
     },
     {
       "a": "athlete",
       "b": "villain",
-      "secret": "악역이 선수의 빚을 안다",
-      "tension": "악역이 협박해 왔다"
+      "secret": "차민혁이 김태오의 빚을 안다",
+      "tension": "차민혁이 협박해 왔다"
     },
     {
       "a": "athlete",
       "b": "medic",
-      "secret": "의료가 몰래 진통제를 줬다",
-      "tension": "선수는 부상을 숨기고 출전 중"
+      "secret": "박정우가 몰래 진통제와 수면제를 줬다",
+      "tension": "김태오는 부상을 숨기고 출전 중"
     },
     {
       "a": "fav",
       "b": "influencer",
-      "secret": "인플이 호감의 \"착한 척 안 하는\" 영상을 갖고 있다",
-      "tension": "인플은 팔로워를 노린다"
+      "secret": "제나가 윤하늘의 \"착한 척 안 하는\" 영상을 갖고 있다",
+      "tension": "제나는 팔로워를 노린다"
     },
     {
       "a": "influencer",
       "b": "medic",
-      "secret": "둘 다 사고 당일 밤 현장 근처에 있었다",
-      "tension": "말하지 않기로 약속"
+      "secret": "둘 다 3주 차 사고 당일 밤 현장 근처에 있었다",
+      "tension": "말하지 않기로 약속했다"
     }
   ],
   "rounds": [
-    { "round": 1, "place": "숙소 거실", "time": "현재", "minutes": 8 },
-    { "round": 2, "place": "편집실", "time": "현재", "minutes": 10 },
-    { "round": 3, "place": "원본 영상 속 그날 밤", "time": "과거", "minutes": 8 }
+    {
+      "round": 1,
+      "place": "숙소 거실",
+      "time": "현재",
+      "minutes": 8
+    },
+    {
+      "round": 2,
+      "place": "편집실",
+      "time": "현재",
+      "minutes": 10
+    },
+    {
+      "round": 3,
+      "place": "원본 영상 속 그날 밤",
+      "time": "과거",
+      "minutes": 8
+    }
   ],
   "reveal": {
-    "pastTruth": "절벽 로프 미션에서 서진의 안전 로프가 낡은 것으로 바꿔치기되어 추락, 크게 다침. 제작진이 시청률을 위해 덮음",
-    "endings": { "caught": "검거 성공", "aired_off": "방송 중단" }
+    "pastTruth": "절벽 로프 미션에서 한서진의 안전 로프가 낡은 것으로 바꿔치기되어 추락, 크게 다쳤다. 제작진은 시청률을 위해 \"개인 사정으로 하차\"로 덮었다",
+    "endings": {
+      "caught": "범인 검거 · 결승 생방송 취소",
+      "aired_off": "생방송 강행 · 진실은 다시 묻혔다"
+    }
   }
 }

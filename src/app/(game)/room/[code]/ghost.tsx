@@ -67,7 +67,7 @@ export function Ghost({
       {shown ? (
         <>
           <p className="text-(length:--text-md) text-(--color-text-muted)">당신은 유령이에요</p>
-          <Chip>범인의 특징</Chip>
+          <Chip>정전 때 복도에서 스친 사람</Chip>
           <h2 className="text-(length:--text-xl) font-extrabold">{ghost.trait}</h2>
           <p className="text-(length:--text-md) text-(--color-text-muted)">
             범인만의 특징은 아니에요. 이 판의 두 명 이상에게 있어요

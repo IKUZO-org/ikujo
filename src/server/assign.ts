@@ -123,8 +123,12 @@ function distributeClues(
   return out;
 }
 
-/** 이 판에 줘도 되는 단서인가: 레드 헤링은 있는 인물을 가리켜야, 아니면 이번 범인을 가리켜야 */
+/**
+ * 이 판에 줘도 되는 단서인가: 레드 헤링은 있는 인물을 가리켜야, 아니면 이번 범인을 가리켜야.
+ * 알리바이 증거(clears, D-032)는 그 인물이 이 판에 있고 범인이 아닐 때만
+ */
 function fitsGame(clue: Scenario["clues"][number], present: Set<string>, culprit: string): boolean {
+  if (clue.clears) return clue.clears.every((c) => present.has(c) && c !== culprit);
   const points = clue.pointsTo ?? [];
   if (clue.redHerring) return points.some((p) => present.has(p));
   // 다른 범인일 때의 증거를 주면 틀린 사실이 된다 `제안` (공정, PRD G-4)

@@ -246,14 +246,19 @@ describe("startGame", () => {
     expect(signal).toEqual({ type: "phase", phase: "intro", endsAt: "2026-11-25T12:03:00.000Z" });
   });
 
-  it("OQ-013: 4명 판 범인은 고를 수 있는 범인(악역)만", async () => {
+  it("D-030: 4명 판 범인은 핵심 인물 4명 중 누구든 (판마다 바뀐다)", async () => {
+    const core = ["fav", "villain", "athlete", "writer"];
+    const seen = new Set<string>();
     for (let i = 0; i < 20; i++) {
       store = memoryStore();
       seed = i;
       const host = await roomWith(4);
       await startGame(phone("u1"), { roomId: host.roomId });
-      expect(store.games[0].game.secret.culpritCharacter).toBe("villain");
+      const culprit = store.games[0].game.secret.culpritCharacter;
+      expect(core).toContain(culprit);
+      seen.add(culprit);
     }
+    expect(seen.size).toBeGreaterThan(1);
   });
 
   it("두 번 눌러도 한 번만 시작", async () => {
