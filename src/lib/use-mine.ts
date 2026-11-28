@@ -1,6 +1,7 @@
 "use client";
 // 내 것 읽기 훅 (spec §4 getMine). 비밀은 신호로 오지 않으므로, 방 상태를 다시 읽을 때마다 같이 다시 읽는다
-// (spec §4 "받으면 getRoomState/getMine 를 다시 부른다"). version 은 useRoomState 의 state 객체.
+// (spec §4 "받으면 getRoomState/getMine 를 다시 부른다"). version 은 useRoomState 의 version
+// (다시 읽어 받을 때만 바뀐다. count 신호로 수만 바뀔 때는 다시 읽지 않는다, #135).
 // pollMs: 신호 없이 오는 개인 것(유령의 속삭임)을 받으려고 그 간격으로도 다시 읽는다. null 이면 안 함
 import { useEffect, useRef, useState } from "react";
 import { getMine } from "@/server/actions/get-mine";

@@ -53,18 +53,25 @@
 - iOS 처럼 틀기 전에는 장면을 그리지 않는 브라우저는 새로 고침 뒤 검정일 수 있음 (#127 때와 같음)
 - 방장 폰 소리: "다음"으로 건너뛰면 영상 안 소리도 같이 건너뛴다. 앱 소리(OP-08 등)는 영상이 끝날 때 나므로 그대로
 
+## 세션 2 (2026-11-28): develop 합치기
+- 할 일: 승인 뒤 develop 에 #140(준비 뒤 전환 지연), #144(라운드 2, 3 영상 cover)가 머지돼 `GameVideo.tsx` 가 충돌 → develop 을 이 브랜치에 합친다 (force push 없이)
+- 한 일: 충돌은 props 자리 하나. 이 PR 의 `seekTo` 와 #144 의 `fit`, `position` 을 둘 다 남김. `opening.tsx` 는 #140 변경과 저절로 합쳐짐
+- 프롬프트 요약: #146 커밋, PR 과 #142 충돌 풀기를 둘 다
+- 확인: typecheck, lint 통과, test 17 파일 165개 통과. 화면은 창 4개가 가려져(`visibilityState=hidden`) 크롬이 영상을 멈춰 확인이 안 돼서, 2번 창 쿠키를 헤드리스 크롬에 옮겨 같은 방을 열어 확인: 영상 재생, "다음"마다 12 / 20 / 29.5초로 건너뛰고 글 같이 바뀜, 36.5초에 멈춤. R2 영상은 `object-cover`(#144) 그대로
+- 남은 일: 없음 (위 남은 일 그대로)
+
 ## 사용량
 `node scripts/usage.mjs --md` 로 만든 값 (2026-11-28). 비용은 정가 기준 추정, 사용률 %는 계정 전체 값이라 다른 작업도 섞인다
 
 | 항목 | 값 |
 | --- | --- |
 | 비용 | 모름 (비용 기록 없음) (세션 1개) |
-| 토큰 | 입력 72 · 출력 23.0k · 캐시 쓰기 31.3k · 캐시 읽기 10.2M |
-| 메시지 | 30 (메인 30, 서브에이전트 0) |
-| 모델 | claude-opus-5-5 30 |
-| 사용률 | 5시간 0% → 6% · 주간 68% → 69% |
-| 많이 쓴 도구 | Bash 19, Edit 13, Read 4, Write 3, AskUserQuestion 1 |
+| 토큰 | 입력 164 · 출력 53.3k · 캐시 쓰기 74.7k · 캐시 읽기 24.3M |
+| 메시지 | 66 (메인 66, 서브에이전트 0) |
+| 모델 | claude-opus-5-5 66 |
+| 사용률 | 5시간 0% → 2% · 주간 68% → 70% |
+| 많이 쓴 도구 | Bash 43, Edit 16, Read 7, Write 3, AskUserQuestion 2 |
 | skill | 없음 |
 | 에이전트 | 없음 |
 
-<!-- usage {"branch":"roohyeon/fix-141-opening-sync","issue":141,"sessions":1,"messages":30,"first":"2026-11-28","last":"2026-11-28","tokens":{"input":72,"output":22972,"cacheWrite":31254,"cacheRead":10234137},"costUSD":null,"where":{"main":{"messages":30,"output":22972},"subagent":{"messages":0,"output":0}},"models":{"claude-opus-5-5":{"messages":30,"output":22972}},"tools":{"Write":3,"Edit":13,"Bash":19,"Read":4,"AskUserQuestion":1},"skills":{},"agents":{},"rate":{"five_hour":{"from":0,"to":6},"seven_day":{"from":68,"to":69}}} -->
+<!-- usage {"branch":"roohyeon/fix-141-opening-sync","issue":141,"sessions":1,"messages":66,"first":"2026-11-28","last":"2026-11-28","tokens":{"input":164,"output":53268,"cacheWrite":74730,"cacheRead":24272132},"costUSD":null,"where":{"main":{"messages":66,"output":53268},"subagent":{"messages":0,"output":0}},"models":{"claude-opus-5-5":{"messages":66,"output":53268}},"tools":{"Write":3,"Edit":16,"Bash":43,"Read":7,"AskUserQuestion":2},"skills":{},"agents":{},"rate":{"five_hour":{"from":0,"to":2},"seven_day":{"from":68,"to":70}}} -->

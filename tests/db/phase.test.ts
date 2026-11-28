@@ -1,9 +1,17 @@
 // advance, ready (spec §1.1, §4). 로컬 Supabase 필요
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import scenario from "../../scenarios/live-death.json";
 import { advancePhase, markReady } from "@/server/game-phase";
+import type { RoomSignal } from "@/lib/realtime";
 import { guest, insert, serviceClient } from "./local-supabase";
+
+const sent = vi.hoisted(() => [] as { roomId: string; signal: unknown }[]);
+vi.mock("@/server/realtime", () => ({
+  broadcast: async (_db: unknown, roomId: string, signal: unknown) => {
+    sent.push({ roomId, signal });
+  },
+}));
 
 type Row = Record<string, unknown> & { id: string };
 
@@ -129,11 +137,25 @@ describe("markReady", () => {
     expect(data?.phase).toBe("secret");
   });
 
+  it("마지막 사람이 눌러 넘어가면 count 신호 없이 phase 신호만 보낸다 (#135)", async () => {
+    const g = await newGame("intro", new Date(Date.now() + 60_000).toISOString());
+    for (const id of userIds.slice(0, 3)) await markReady(db, id, g, "intro");
+    sent.length = 0;
+    await markReady(db, userIds[3], g, "intro");
+    expect(sent.map((x) => (x.signal as RoomSignal).type)).toEqual(["phase"]);
+  });
+
   it("r1 은 모두 눌러도 시간 전엔 안 넘어간다 (OQ-007)", async () => {
     const g = await newGame("r1", new Date(Date.now() + 60_000).toISOString());
-    for (const id of userIds) await markReady(db, id, g, "r1");
+    for (const id of userIds.slice(0, 3)) await markReady(db, id, g, "r1");
+    sent.length = 0;
+    await markReady(db, userIds[3], g, "r1");
     const { data } = await db.from("games").select("phase").eq("id", g).single();
     expect(data?.phase).toBe("r1");
+    // 넘기지 못했으면 count 신호는 그대로 보낸다
+    expect(sent.map((x) => x.signal)).toEqual([
+      { type: "count", gameId: g, phase: "r1", ready: 4 },
+    ]);
   });
 
   it("r2 에서 유령은 분모와 누른 수에서 빠진다 (#53)", async () => {

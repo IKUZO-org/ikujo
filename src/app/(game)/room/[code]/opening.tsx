@@ -58,7 +58,7 @@ export function Opening({
   game: GameState;
   isHost: boolean;
   top: ReactNode;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   // 영상을 이미 끝까지 본 뒤 새로 고쳤으면 영상은 마지막 장면에 멈춰 있으므로 글도 마지막 장면부터 (#141).
   // 방 화면은 방 상태를 읽은 뒤 브라우저에서만 그려져서 처음부터 저장소를 읽어도 된다 (GameVideo 와 같음)
@@ -87,9 +87,10 @@ export function Opening({
     }
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await ready(game.id, "intro");
       if ("error" in r) setError(r.error);
-      await reload();
+      await reload(since);
     });
   }
 

@@ -1,8 +1,16 @@
 // vote, 판정 (spec §4 vote, S-11). 로컬 Supabase 필요
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { castVote } from "@/server/game-vote";
+import type { RoomSignal } from "@/lib/realtime";
 import { guest, insert, serviceClient } from "./local-supabase";
+
+const sent = vi.hoisted(() => [] as RoomSignal[]);
+vi.mock("@/server/realtime", () => ({
+  broadcast: async (_db: unknown, _roomId: string, signal: RoomSignal) => {
+    sent.push(signal);
+  },
+}));
 
 type Row = Record<string, unknown> & { id: string };
 
@@ -92,6 +100,18 @@ describe("castVote", () => {
     expect(await cast(g, 0, 1)).toMatchObject({ ok: true, votes: 1, total: 4 });
     const { data } = await users[1].client.from("votes").select("*").eq("game_id", g);
     expect(data).toHaveLength(0);
+  });
+
+  it("마지막 표로 판정해 넘어가면 count 신호 없이 phase 신호만 보낸다 (#135)", async () => {
+    const g = await newGame();
+    sent.length = 0;
+    for (const i of [0, 1, 2]) await cast(g, i, 0);
+    expect(sent).toEqual(
+      [1, 2, 3].map((votes) => ({ type: "count", gameId: g, phase: "vote", votes })),
+    );
+    sent.length = 0;
+    await cast(g, 3, 0);
+    expect(sent.map((x) => x.type)).toEqual(["phase"]);
   });
 
   it("마지막 두 표가 동시에 와도 판정은 한 번만", async () => {
