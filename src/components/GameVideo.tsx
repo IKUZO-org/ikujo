@@ -12,7 +12,14 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readItem, writeItem } from "@/lib/session-item";
 import { isOn, onSettingsChange } from "@/lib/settings";
 import { onNextTap } from "@/lib/tap";
-import { playedKey, VIDEO_VOLUME, videoHasSound, videoSrc, type VideoId } from "@/lib/video";
+import {
+  holdAt,
+  playedKey,
+  VIDEO_VOLUME,
+  videoHasSound,
+  videoSrc,
+  type VideoId,
+} from "@/lib/video";
 
 // playing: 트는 중, ended: 이번에 끝까지 봄(마지막 장면), seen: 전에 봄(틀지 않고 마지막 장면),
 // skipped: 움직임 줄이기라 틀지 않음, failed: 못 틂
@@ -38,6 +45,7 @@ export function GameVideo({
   isHost = false,
   onEnded,
   onTime,
+  seekTo = null,
 }: {
   id: VideoId;
   gameId: string;
@@ -47,6 +55,11 @@ export function GameVideo({
   onEnded?: (how: "ended" | "skipped") => void;
   /** 재생 중 시각(초)이 바뀔 때마다 (timeupdate). 영상 안 장면에 맞춰 소리를 낼 때 쓴다 */
   onTime?: (seconds: number) => void;
+  /**
+   * 트는 중이면 이 시각(초)으로 건너뛴다. 값이 바뀔 때마다 한 번, 앞으로만 (#141 오프닝 "다음").
+   * 이미 그 시각을 지났거나 트는 중이 아니면(이미 봄, 못 틂) 아무것도 하지 않는다
+   */
+  seekTo?: number | null;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const key = playedKey(gameId, id);
@@ -111,6 +124,15 @@ export function GameVideo({
     if (ref.current) ref.current.muted = !wantSound;
   }, [wantSound]);
 
+  // 바깥(오프닝 "다음")이 장면을 넘기면 영상도 그 장면으로 건너뛴다 (#141). 트는 중일 때만, 앞으로만
+  useEffect(() => {
+    const v = ref.current;
+    if (seekTo === null || !v || status !== "playing") return;
+    if (v.currentTime < seekTo) v.currentTime = seekTo;
+    // status 가 바뀔 때는 다시 건너뛰지 않는다: seekTo 가 바뀔 때만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seekTo]);
+
   function fail() {
     // 이미 본 영상의 마지막 장면을 못 불러온 것은 알리지 않는다: 뒤에 이어지는 소리가 또 나지 않게
     const was = status;
@@ -119,15 +141,28 @@ export function GameVideo({
   }
 
   function finish() {
+    if (status !== "playing") return; // 멈춰 둘 시각에서 끝낸 뒤 ended 가 또 와도 한 번만
     writeItem(key, "1");
     setStatus("ended");
     ended.current?.("ended");
   }
 
-  // 이미 본 영상: 틀지 않고 마지막 장면으로만 옮긴다 (소리 없음)
+  // 끝이 검게 사라지는 영상은 그 직전에서 멈추고 끝난 것으로 본다 (#141)
+  const hold = holdAt(id);
+  function onTimeUpdate(v: HTMLVideoElement) {
+    if (status !== "playing") return;
+    time.current?.(v.currentTime);
+    if (hold !== null && v.currentTime >= hold) {
+      v.pause();
+      v.currentTime = hold;
+      finish();
+    }
+  }
+
+  // 이미 본 영상: 틀지 않고 마지막 장면으로만 옮긴다 (소리 없음). 멈춰 둘 시각이 있으면 그 장면
   function showLastFrame(v: HTMLVideoElement) {
     if (status !== "seen" || !Number.isFinite(v.duration)) return;
-    v.currentTime = Math.max(0, v.duration - LAST_FRAME_GAP_S);
+    v.currentTime = hold ?? Math.max(0, v.duration - LAST_FRAME_GAP_S);
   }
 
   if (status === "skipped" || status === "failed") return null;
@@ -145,7 +180,7 @@ export function GameVideo({
         // 첫 장면이 준비되면 살짝 나타난다: 글보다 늦게 툭 뜨지 않게 (QA #136)
         onLoadedData={() => setShown(true)}
         // 재생 중일 때만 알린다. 마지막 장면으로 옮길 때 알리면 시각에 맞춘 소리(RV-02 등)가 또 난다
-        onTimeUpdate={(e) => status === "playing" && time.current?.(e.currentTarget.currentTime)}
+        onTimeUpdate={(e) => onTimeUpdate(e.currentTarget)}
         onEnded={finish}
         onError={fail}
         className={`absolute inset-0 size-full bg-(--color-bg) object-contain transition-opacity duration-(--duration-base) motion-reduce:transition-none ${shown ? "opacity-100" : "opacity-0"}`}

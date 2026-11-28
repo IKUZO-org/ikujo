@@ -25,6 +25,18 @@ export function videoHasSound(
   return isHost;
 }
 
+/**
+ * 끝이 검게 사라지는(페이드 아웃) 영상은 어두워지기 직전 시각(초)에서 멈추고 그 장면을 둔다 (#141).
+ * 그대로 끝까지 틀면 마지막 장면이 검정이라 그래픽 영역이 꺼진 것처럼 보인다.
+ * - V-01: C-08 편집실이 36.5초부터 어두워져 39.25초에 검정 (밝기를 재서 정함. 영상을 다시 편집하면 같이 고친다)
+ */
+const HOLD_AT_S: Partial<Record<VideoId, number>> = { "v-01": 36.5 };
+
+/** 이 영상을 멈춰 둘 시각(초). 끝까지 트는 영상이면 null */
+export function holdAt(id: VideoId): number | null {
+  return HOLD_AT_S[id] ?? null;
+}
+
 /** 한 판에서 한 번 끝까지 본 영상은 다시 틀지 않는다 (새로 고침, 탭 바꾸기). sessionStorage 키 */
 export function playedKey(gameId: string, id: VideoId): string {
   return `last-one:video:${gameId}:${id}`;

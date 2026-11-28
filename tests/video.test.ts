@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { onSettingsChange, setOn } from "@/lib/settings";
 import {
+  holdAt,
   isOpeningDone,
   markOpeningDone,
   onOpeningDone,
@@ -75,5 +76,16 @@ describe("onSettingsChange", () => {
     stop();
     setOn("sound", true);
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("holdAt (#141)", () => {
+  it("끝이 검게 사라지는 V-01 은 어두워지기 직전에서 멈춘다", () => {
+    expect(holdAt("v-01")).toBe(36.5);
+  });
+
+  it("나머지 영상은 끝까지 튼다", () => {
+    expect(holdAt("v-03")).toBeNull();
+    expect(holdAt("v-07")).toBeNull();
   });
 });
