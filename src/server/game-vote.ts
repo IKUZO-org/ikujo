@@ -86,9 +86,14 @@ export async function castVote(
 
   // 공용에는 완료 인원만 (AC-060). 누가 누구를 찍었는지는 싣지 않는다
   const { ready: votes, total } = await voteCounts(db, game, phase);
-  await broadcast(db, game.room_id, { type: "count", votes });
-  // 모두 투표했으면 그 자리에서 판정한다. 넘길지와 한 번만 넘기는 것은 advancePhase 가 맡는다
-  if (total > 0 && votes >= total) await advancePhase(db, userId, gameId, phase, now);
+  // 모두 투표했으면 그 자리에서 판정한다. 넘길지와 한 번만 넘기는 것은 advancePhase 가 맡는다.
+  // 넘겼으면 phase 신호로 충분해서 count 신호는 넘기지 못했을 때만 보낸다 (#135)
+  let advanced = false;
+  if (total > 0 && votes >= total) {
+    const r = await advancePhase(db, userId, gameId, phase, now);
+    advanced = "ok" in r && r.advanced;
+  }
+  if (!advanced) await broadcast(db, game.room_id, { type: "count", gameId, phase, votes });
   return { ok: true, votes, total };
 }
 

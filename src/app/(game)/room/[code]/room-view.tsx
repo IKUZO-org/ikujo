@@ -34,7 +34,7 @@ const WHISPER_POLL_MS = 10_000;
 export function RoomView({ title }: { title: string }) {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
-  const { state, error: loadError, reload: load, remainingMs } = useRoomState(code);
+  const { state, version, error: loadError, reload: load, remainingMs } = useRoomState(code);
   const game = state?.status === "lobby" ? null : (state?.game ?? null);
   // 단계에 따라 나는 소리. 누가 낼지는 sound-cues.ts SOUND_TARGET (#100)
   useRoomSound(state, remainingMs);
@@ -44,7 +44,7 @@ export function RoomView({ title }: { title: string }) {
   const whisperRounds = (game?.phase === "r2" || game?.phase === "r3") && !isGhost;
   const mine = useMine(
     game && game.phase !== "intro" ? game.id : null,
-    state,
+    version,
     whisperRounds ? WHISPER_POLL_MS : null,
   );
 
@@ -217,7 +217,7 @@ function Lobby({
 }: {
   state: RoomState;
   onLeft: () => void;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   const [error, setError] = useState<string | null>(null);
   // null: 아직 안 누름, true: 복사함, false: 복사 못 함 (QA #136)
@@ -233,10 +233,11 @@ function Lobby({
   function start() {
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await startGame({ roomId: state.roomId });
       if ("error" in r) setError(r.error);
       else playSound("lb-02", { isHost: state.me.isHost }); // 방장이 시작 누름 (sound.md LB-02)
-      await reload();
+      await reload(since);
     });
   }
 

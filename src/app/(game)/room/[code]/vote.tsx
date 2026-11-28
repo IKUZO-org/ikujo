@@ -23,7 +23,7 @@ export function Vote({
   vote: VoteState;
   players: RoomState["players"];
   top: ReactNode;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   const [picked, setPicked] = useState<string | null>(v.myChangeableTarget);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +42,11 @@ export function Vote({
     if (!picked) return;
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await vote(game.id, picked);
       if ("error" in r) setError(r.error);
       else playSound("vt-02", { isHost: false }); // 내 표 보냄. 이 폰만 (sound.md VT-02)
-      await reload();
+      await reload(since);
     });
   }
 

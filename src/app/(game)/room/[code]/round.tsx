@@ -53,7 +53,7 @@ export function Round({
   /** 모두 준비한 순간 3초: 버튼 바로 위에 "이제 이야기를 나눠 보세요" (#138) */
   toast?: boolean;
   top: ReactNode;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   // 고른 탭은 이 판, 이 라운드 동안 기억한다: 새로 고쳐도 그 탭으로 (AC-NFR-002, #44).
   // 라운드가 바뀌면 key 가 달라 "모두의 단서"부터 (새 공용 단서를 먼저 보게)
@@ -83,9 +83,10 @@ export function Round({
   function markReady() {
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await ready(game.id, game.phase);
       if ("error" in r) setError(r.error);
-      await reload();
+      await reload(since);
     });
   }
 

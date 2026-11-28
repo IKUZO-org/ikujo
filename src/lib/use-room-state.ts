@@ -1,10 +1,12 @@
 "use client";
 // 방 상태 훅 (#21, data §5, NFR-001/002). 서버 상태(getRoomState)를 따라간다.
-// 다시 읽는 때: 화면을 열 때, room:{roomId} 신호를 받을 때, 남은 시간이 0 이 될 때.
+// 다시 읽는 때: 화면을 열 때, room:{roomId} 신호를 받을 때(count 는 빼고), 남은 시간이 0 이 될 때.
 // 0 이 되면 advance 를 부르고 다시 읽는다. 단계를 실제로 넘길지는 서버가 정한다.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { applyCount, keepHeardCounts } from "@/lib/apply-count";
+import { runCoalesced, type CoalesceSlot } from "@/lib/coalesce";
 import { clockOffsetMs, remainingMs as calcRemaining } from "@/lib/room-clock";
-import { roomChannel, SIGNAL_EVENT } from "@/lib/realtime";
+import { roomChannel, SIGNAL_EVENT, type RoomSignal } from "@/lib/realtime";
 import { createClient } from "@/lib/supabase/client";
 import { getRoomState } from "@/server/actions/get-room-state";
 import { advance } from "@/server/actions/phase";
@@ -17,25 +19,32 @@ export function useRoomState(code: string) {
   const [state, setState] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [offsetMs, setOffsetMs] = useState(0);
+  // 다시 읽어 받은 횟수. count 신호로 수만 바꿀 때는 그대로라 getMine 을 다시 부르지 않는다 (#135)
+  const [version, setVersion] = useState(0);
   const [now, setNow] = useState(0); // 폰 시각. 읽을 때와 1초마다 바꾼다
 
   const alive = useRef(true);
-  const seq = useRef(0); // 늦게 온 옛 응답은 버린다
   const advanced = useRef(new Set<string>()); // 이 폰에서 advance 를 부른 (gameId, phase)
   const retry = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const reload = useCallback(() => {
-    const mine = ++seq.current;
-    return getRoomState({ code }).then((r) => {
-      if (!alive.current || mine !== seq.current) return;
-      if ("error" in r) return setError(r.error);
-      const phoneNow = Date.now();
-      setError(null);
-      setOffsetMs(clockOffsetMs(r.serverNow, phoneNow));
-      setNow(phoneNow);
-      setState(r.state);
-    });
+  // 읽는 중에 또 부르면 끝난 뒤 한 번만 더 읽는다 (#135). 읽기가 겹치지 않아 옛 응답이 새 응답을 덮지 않는다
+  // 이 읽기가 출발한 뒤 받은 count 신호. 응답이 그보다 옛 수면 내리지 않는다 (#135, keepHeardCounts)
+  const heard = useRef<Extract<RoomSignal, { type: "count" }>[]>([]);
+  const load = useCallback(async () => {
+    heard.current = [];
+    const r = await getRoomState({ code });
+    if (!alive.current) return;
+    if ("error" in r) return setError(r.error);
+    const phoneNow = Date.now();
+    setError(null);
+    setOffsetMs(clockOffsetMs(r.serverNow, phoneNow));
+    setNow(phoneNow);
+    setState(keepHeardCounts(r.state, heard.current));
+    setVersion((v) => v + 1);
   }, [code]);
+  const reading: CoalesceSlot = useRef({ inflight: null, dirty: false });
+  // since 를 주면 액션 뒤 다시 읽기: 액션 뒤에 출발한 읽기에는 합류만 한다 (#135, coalesce.ts)
+  const reload = useCallback((since?: number) => runCoalesced(reading, load, since), [load]);
 
   useEffect(() => {
     alive.current = true;
@@ -47,14 +56,20 @@ export function useRoomState(code: string) {
     };
   }, [reload]);
 
-  // 신호를 받을 때 다시 읽는다 (NFR-001)
+  // 신호를 받을 때 다시 읽는다 (NFR-001). count 는 실린 수만 바꾸고 다시 읽지 않는다 (#135)
   const roomId = state?.roomId;
   useEffect(() => {
     if (!roomId) return;
     const supabase = createClient();
     const channel = supabase
       .channel(roomChannel(roomId))
-      .on("broadcast", { event: SIGNAL_EVENT }, () => void reload())
+      .on("broadcast", { event: SIGNAL_EVENT }, ({ payload }) => {
+        const signal = payload as RoomSignal;
+        if (signal?.type === "count") {
+          heard.current.push(signal);
+          setState((s) => applyCount(s, signal));
+        } else void reload();
+      })
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
@@ -93,5 +108,5 @@ export function useRoomState(code: string) {
     return () => clearInterval(id);
   }, [gameId, phase, endsAt, offsetMs, reload]);
 
-  return { state, error, remainingMs, reload };
+  return { state, version, error, remainingMs, reload };
 }

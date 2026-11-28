@@ -26,7 +26,7 @@ export function Ghost({
   players: RoomState["players"];
   mine: MineState | null;
   top: ReactNode;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   const reveal = usePrivateReveal();
   const [open, setOpen] = useState<Open>(null);
@@ -98,7 +98,7 @@ function WhisperSheet({
   gameId: string;
   alive: RoomState["players"];
   onClose: () => void;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   const [to, setTo] = useState<string | null>(null);
   const [body, setBody] = useState("");
@@ -109,9 +109,10 @@ function WhisperSheet({
     if (!to) return;
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await whisper({ gameId, toPlayerId: to, body });
       if ("error" in r) return setError(r.error);
-      await reload();
+      await reload(since);
       onClose();
     });
   }
@@ -160,7 +161,7 @@ function HauntSheet({
 }: {
   gameId: string;
   onClose: () => void;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -169,9 +170,10 @@ function HauntSheet({
   function send() {
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await haunt({ gameId, body });
       if ("error" in r) return setError(r.error);
-      await reload();
+      await reload(since);
       onClose();
     });
   }

@@ -32,7 +32,7 @@ export function Reveal({
   gameId: string;
   state: RoomState;
   top: ReactNode;
-  reload: () => Promise<void>;
+  reload: (since?: number) => Promise<void>;
 }) {
   const router = useRouter();
   const [data, setData] = useState<Loaded | null>(null);
@@ -87,11 +87,12 @@ export function Reveal({
   function act(run: () => Promise<{ error: string } | { ok: true }>, after?: () => void) {
     setError(null);
     startTransition(async () => {
+      const since = performance.now();
       const r = await run();
       if ("error" in r) return setError(r.error);
       // 다른 화면으로 떠나면(홈으로) 방을 다시 읽지 않는다. 다시 읽기를 기다리느라 홈이 늦게 떴다 (QA #136)
       if (after) return after();
-      await reload();
+      await reload(since);
     });
   }
 
